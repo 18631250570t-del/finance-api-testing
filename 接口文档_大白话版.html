@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>记账 API · 大白话接口文档</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    max-width: 1000px; margin: 0 auto; padding: 32px 24px 80px;
+    background: #f4f6f9; color: #23282f; line-height: 1.85; font-size: 15px;
+  }
+  h1 { font-size: 27px; margin: 0 0 6px; color: #16324f; }
+  .sub { color: #7b8794; font-size: 13px; margin-bottom: 26px; }
+  h2 { font-size: 20px; margin: 42px 0 14px; padding-bottom: 8px; border-bottom: 2px solid #dbe3ec; color: #16324f; }
+  h3 { font-size: 16px; margin: 24px 0 10px; color: #2c3e50; }
+  p { margin: 10px 0; }
+  code { background: #e8eef6; padding: 1px 6px; border-radius: 3px; font-family: Consolas, "Courier New", monospace; font-size: 13px; color: #b03060; }
+  pre {
+    background: #1d2431; color: #dfe8f3; padding: 14px 16px; border-radius: 8px;
+    overflow-x: auto; font-size: 13px; line-height: 1.65; margin: 10px 0;
+    font-family: Consolas, "Courier New", monospace;
+  }
+  pre .k { color: #7fd1ff; }
+  pre .s { color: #a8e6a3; }
+  pre .n { color: #ffb86c; }
+
+  /* 目录 */
+  .toc { background: #fff; border: 1px solid #dde5ee; border-radius: 10px; padding: 16px 20px; }
+  .toc ol { margin: 8px 0 0; padding-left: 22px; }
+  .toc a { color: #2e5c8a; text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+
+  /* 概念卡 */
+  .concept { background: #fff; border: 1px solid #dde5ee; border-radius: 10px; padding: 16px 20px; margin: 14px 0; }
+  .concept b { color: #16324f; }
+
+  /* 提示框 */
+  .tip, .warn, .danger {
+    border-radius: 8px; padding: 12px 16px; margin: 14px 0; font-size: 14px;
+  }
+  .tip    { background: #eaf4ff; border-left: 4px solid #3b82f6; }
+  .warn   { background: #fff8e1; border-left: 4px solid #f59e0b; }
+  .danger { background: #fdecec; border-left: 4px solid #dc2626; }
+
+  /* 接口卡 */
+  .ep { background: #fff; border: 1px solid #dde5ee; border-radius: 10px; margin: 20px 0; overflow: hidden; }
+  .ep-head { display: flex; align-items: center; gap: 12px; padding: 12px 18px; background: #f8fafc; border-bottom: 1px solid #e6ecf3; flex-wrap: wrap; }
+  .m { font-family: Consolas, monospace; font-size: 12px; font-weight: bold; color: #fff; padding: 3px 10px; border-radius: 4px; letter-spacing: .5px; }
+  .m-get    { background: #16a34a; }
+  .m-post   { background: #2563eb; }
+  .m-put    { background: #ea580c; }
+  .m-delete { background: #dc2626; }
+  .path { font-family: Consolas, monospace; font-size: 15px; font-weight: bold; color: #16324f; }
+  .lock { font-size: 12px; color: #b45309; background: #fef3c7; padding: 2px 8px; border-radius: 10px; margin-left: auto; }
+  .open { font-size: 12px; color: #0f766e; background: #d1fae5; padding: 2px 8px; border-radius: 10px; margin-left: auto; }
+  .ep-body { padding: 14px 18px 18px; }
+  .row { display: flex; gap: 10px; margin: 8px 0; font-size: 14px; }
+  .row .lab { flex: 0 0 92px; color: #64748b; }
+  .row .val { flex: 1; }
+
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13.5px; background: #fff; }
+  th, td { border: 1px solid #e2e8f0; padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #f1f5f9; color: #475569; font-weight: 600; }
+  td code { background: #f1f5f9; color: #b03060; }
+
+  .tags { margin-top: 12px; font-size: 12px; color: #64748b; }
+  .tag { display: inline-block; background: #eef2f7; color: #334155; border-radius: 12px; padding: 2px 10px; margin: 3px 6px 3px 0; font-family: Consolas, monospace; }
+
+  .journey { background: #fff; border: 1px solid #dde5ee; border-radius: 10px; padding: 18px 22px; font-family: Consolas, "Courier New", monospace; font-size: 13.5px; line-height: 2.1; overflow-x: auto; }
+  .journey b { color: #2563eb; font-family: "Microsoft YaHei", sans-serif; }
+</style>
+</head>
+<body>
+
+<h1>记账 API · 大白话接口文档</h1>
+<div class="sub">
+  被测系统：personal-finance-tracker-api　｜　地址：<code>http://127.0.0.1:8000</code>　｜
+  共 15 个接口　｜　写给"要测它的人"看，不是写给开发看的
+</div>
+
+<div class="toc">
+  <b>怎么看这份文档</b>
+  <ol>
+    <li><a href="#basic">先搞懂 3 个词：接口 / 请求响应 / 状态码</a></li>
+    <li><a href="#map">这个系统一共能干什么（一张图看完）</a></li>
+    <li><a href="#eps">逐个接口：用户想干什么 → 要填什么 → 成功长什么样 → 什么情况会失败</a></li>
+    <li><a href="#codes">状态码速查表</a></li>
+    <li><a href="#howto">我自己怎么发一个请求试试</a></li>
+  </ol>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="basic">一、先搞懂 3 个词</h2>
+
+<div class="concept">
+  <b>1. 接口（API）是什么？</b><br>
+  就是<strong>服务员</strong>。你在手机上点了"记一笔账"，手机不会自己存数据，它会把这件事<strong>交给服务员</strong>，服务员再送到后厨（数据库）。<br>
+  每个"能办的事"就是一个接口。这个系统有 15 个接口 = 15 个前台窗口。
+</div>
+
+<div class="concept">
+  <b>2. 请求（Request）和响应（Response）</b><br>
+  你对着窗口说"我要记账，金额 100，分类 food" → 这叫<strong>请求</strong>。<br>
+  窗口回你"办好了，编号是 7" → 这叫<strong>响应</strong>。<br>
+  请求由三样东西组成：<strong>地址</strong>（哪个窗口）、<strong>方法</strong>（办什么事）、<strong>内容</strong>（要什么材料）。
+</div>
+
+<div class="concept">
+  <b>3. 四个"方法"（动词）</b><br>
+  <table>
+    <tr><th>方法</th><th>大白话</th><th>对应生活</th></tr>
+    <tr><td><code>GET</code></td><td>我要看</td><td>查余额</td></tr>
+    <tr><td><code>POST</code></td><td>我要新建</td><td>新开一张卡</td></tr>
+    <tr><td><code>PUT</code></td><td>我要改</td><td>改手机号</td></tr>
+    <tr><td><code>DELETE</code></td><td>我要删</td><td>销户</td></tr>
+  </table>
+  所以 <code>GET /transactions</code> 读作"我要看交易列表"，<code>DELETE /transactions/7</code> 读作"我要删掉编号 7 的那笔交易"。
+</div>
+
+<div class="concept">
+  <b>4. 状态码：服务员的脸色</b><br>
+  每次响应都会带一个三位数字，告诉你事情办成没办成：
+  <table>
+    <tr><th>码</th><th>意思</th><th>你该怎么办</th></tr>
+    <tr><td><code>200</code></td><td>办好了</td><td>看返回的内容</td></tr>
+    <tr><td><code>201</code></td><td>新建成功了</td><td>看返回的新对象</td></tr>
+    <tr><td><code>400</code></td><td>你要求的事办不了（业务上不允许）</td><td>看 detail 里怎么说</td></tr>
+    <tr><td><code>401</code></td><td>你没出示通行证 / 通行证是假的</td><td>去登录拿 token</td></tr>
+    <tr><td><code>404</code></td><td>你要的东西不存在（或不是你的）</td><td>检查编号</td></tr>
+    <tr><td><code>422</code></td><td>你填的格式不对（少字段、太短、类型错）</td><td>看 detail 数组里指了哪个字段</td></tr>
+    <tr><td><code>500</code></td><td>后厨炸了（服务器内部错误）</td><td><strong>这是 bug，要提缺陷单</strong></td></tr>
+  </table>
+</div>
+
+<div class="concept">
+  <b>5. token（通行证）是什么？</b><br>
+  注册/登录之后，系统发给你一串很长的字符，长得像<br>
+  <code>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIn0.abc123</code><br>
+  它被两个点分成三段。以后你每次办事，都要在请求头里带上它：<br>
+  <code>Authorization: Bearer eyJhbGciOi...</code><br>
+  <strong>它证明"你是谁"。</strong>没有它，除了注册和登录，别的接口一律回你 401。
+</div>
+
+<!-- ============================================================ -->
+<h2 id="map">二、这个系统一共能干什么</h2>
+
+<p>一句话：<strong>它是个记账本。</strong>三个东西：用户、交易、预算；统计是现算的，不用存。</p>
+
+<div class="journey">
+① 新用户注册　　　　<b>POST /register</b>　　邮箱 + 密码<br>
+　　　↓<br>
+② 登录拿通行证　　　<b>POST /login</b>　　　 返回 token<br>
+　　　↓<br>
+③ 记一笔账　　　　　<b>POST /transactions</b>　金额 100、分类 food<br>
+　　　↓<br>
+④ 查我记了哪些　　　<b>GET /transactions</b>　 可按分类/金额/月份筛<br>
+　　　↓<br>
+⑤ 看这个月花多少　　<b>GET /stats</b>　　　 总支出、笔数、最大单笔<br>
+　　　↓<br>
+⑥ 设个限额管自己　　<b>POST /budgets</b>　　 "餐饮每月最多 1500"<br>
+<br>
+再加上"单独查 / 改 / 删"某一笔 → 就是全部 15 个接口了。
+</div>
+
+<div class="tip">
+  <b>一个重要认知：</b>统计（<code>/stats</code>）没有自己的数据表，它是<strong>每次现算</strong>的——把这月的交易金额加起来。
+  所以"删掉一笔交易，统计会自动变少"，而"预算"和"交易"在这个系统里<strong>毫无关联</strong>（设了 1500 的预算，系统不会告诉你已经花了多少）。这是它的产品短板，也是你写测试报告时的素材。
+</div>
+
+<!-- ============================================================ -->
+<h2 id="eps">三、逐个接口</h2>
+
+<!-- ---------------------------- 1 ---------------------------- -->
+<div class="ep">
+  <div class="ep-head">
+    <span class="m m-post">POST</span>
+    <span class="path">/register</span>
+    <span class="open">不需要通行证</span>
+  </div>
+  <div class="ep-body">
+    <div class="row"><div class="lab">用户想干什么</div><div class="val">第一次用这个 App，注册一个新账号</div></div>
+    <div class="row"><div class="lab">要填什么</div><div class="val">
+      <code>email</code> 邮箱（必须像邮箱的样子）<br>
+      <code>password</code> 密码（<b>至少 8 位</b>）
+    </div></div>
+    <div class="row"><div class="lab">请求长这样</div><div class="val">
+<pre>POST /register
+Content-Type: application/json
+
+{
+  <span class="k">"email"</span>: <span class="s">"alice@example.com"</span>,
+  <span class="k">"password"</span>: <span class="s">"Passw0rd!23"</span>
+}</pre>
+    </div></div>
+    <div class="row"><div class="lab">成功返回</div><div class="val">
+      <code>201</code>
+<pre>{
+  <span class="k">"message"</span>: <span class="s">"User created"</span>,
+  <span class="k">"id"</span>: <span class="n">1</span>,
+  <span class="k">"email"</span>: <span class="s">"alice@example.com"</span>
+}</pre>
+      <b>注意：</b>响应里<strong>没有密码</strong>。有密码就说明它明文返回了，那是严重问题。
+    </div></div>
+    <div class="row"><div class="lab">会失败的情况</div><div class="val">
+      <table>
+        <tr><th>你干了什么</th><th>码</th><th>返回</th></tr>
+        <tr><td>邮箱写 <code>abc</code>（不像邮箱）</td><td>422</td><td><code>detail</code> 数组，<code>loc</code> 指向 email</td></tr>
+        <tr><td>密码只写 7 位</td><td>422</td><td><code>loc</code> 指向 password，msg 说至少 8 位</td></tr>
+        <tr><td>这个邮箱注册过了</td><td>400</td><td><code>{"detail":"User already exists"}</code></td></tr>
+        <tr><td>漏了 password 字段</td><td>422</td><td><code>loc: ["body","password"]</code></td></tr>
+      </table>
+    </div></div>
+    <div class="tags">对应测试用例：
+      <span class="tag">AUTH-001 正常注册</span>
+      <span class="tag">AUTH-003 密码7位</span>
+      <span class="tag">AUTH-007 邮箱非法</span>
+      <span class="tag">AUTH-013 重复注册</span>
+    </div>
+  </div>
+</div>
+
+<!-- ---------------------------- 2 ---------------------------- -->
+<div class="ep">
+  <div class="ep-head">
+    <span class="m m-post">POST</span>
+    <span class="path">/login</span>
+    <span class="open">不需要通行证</span>
+  </div>
+  <div class="ep-body">
+    <div class="row"><div class="lab">用户想干什么</div><div class="val">用邮箱密码登录，换一张"通行证"</div></div>
+    <div class="row"><div class="lab">要填什么</div><div class="val"><code>email</code>、<code>password</code></div></div>
+    <div class="row"><div class="lab">成功返回</div><div class="val">
+      <code>200</code>
+<pre>{
+  <span class="k">"access_token"</span>: <span class="s">"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.x7fK..."</span>,
+  <span class="k">"token_type"</span>: <span class="s">"bearer"</span>
+}</pre>
+      <b>这个 access_token 就是通行证</b>，后面所有接口都要带它。通行证 30 分钟后自动过期。
+    </div></div>
+    <div class="row"><div class="lab">会失败的情况</div><div class="val">
+      <table>
+        <tr><th>你干了什么</th><th>码</th><th>返回</th></tr>
+        <tr><td>邮箱没注册过</td><td>401</td><td><code>{"detail":"Invalid credentials"}</code></td></tr>
+        <tr><td>密码错了</td><td>401</td><td><b>和上面完全一样</b>（故意不告诉你错在哪，防坏人试探）</td></tr>
+        <tr><td>密码大小写不对</td><td>401</td><td>同上</td></tr>
+        <tr><td>邮箱格式非法</td><td>422</td><td><code>loc</code> 指向 email</td></tr>
+      </table>
+    </div></div>
+    <div class="tags">对应测试用例：
+      <span class="tag">AUTH-021 正常登录</span>
+      <span class="tag">AUTH-022 未注册邮箱</span>
+      <span class="tag">AUTH-023 密码错误</span>
+      <span class="tag">AUTH-026 缺password</span>
+    </div>
+  </div>
+</div>
+
+<!-- ---------------------------- 3 ---------------------------- -->
+<div class="ep">
+  <div class="ep-head">
+    <span class="m m-get">GET</span>
+    <span class="path">/me</span>
+    <span class="lock">要通行证</span>
+  </div>
+  <div class="ep-body">
+    <div class="row"><div class="lab">用户想干什么</div><div class="val">问系统"你还认得我是谁吗"</div></div>
+    <div class="row"><div class="lab">成功返回</div><div class="val">
+      <code>200</code>
+<pre>{ <span class="k">"user_id"</span>: <span class="n">1</span> }</pre>
+      <b>为什么需要它：</b>它是"通行证有没有效"最简单的自检。测试时经常用它来验证 token 可用。
+    </div></div>
+    <div class="row"><div class="lab">会失败的情况</div><div class="val">
+      <table>
+        <tr><th>情况</th><th>码</th><th>返回</th></tr>
+        <tr><td>根本没带 token</td><td>401</td><td><code>{"detail":"Not authenticated"}</code></td></tr>
+        <tr><td>token 是瞎写的 / 过期了 / 被改过</td><td>401</td><td><code>{"detail":"Invalid token"}</code></td></tr>
+      </table>
+      <b>注意这两种 401 的文案不一样</b>，断言时要分清。
+    </div></div>
+    <div class="tags">对应测试用例：
+      <span class="tag">AUTH-031 正常</span>
+      <span class="tag">AUTH-032 无token</span>
+      <span class="tag">AUTH-034 过期token</span>
+      <span class="tag">AUTH-042 幽灵用户</span>
+    </div>
+  </div>
+</div>
+
+<!-- ---------------------------- 4 ---------------------------- -->
+<div class="ep">
+  <div class="ep-head">
+    <span class="m m-post">POST</span>
+    <span class="path">/transactions</span>
+    <span class="lock">要通行证</span>
+  </div>
+  <div class="ep-body">
+    <div class="row"><div class="lab">用户想干什么</div><div class="val">记一笔花销</div></div>
+    <div class="row"><div class="lab">要填什么</div><div class="val">
+      <code>amount</code> 金额（<b>必须大于 0</b>）<br>
+      <code>category</code> 分类（1~100 个字符）<br>
+      <code>date</code> 时间（可选，不填就是现在）
+    </div></div>
+    <div class="row"><div class="lab">请求长这样</div><div class="val">
+<pre>POST /transactions
+Authorization: Bearer eyJhbGciOi...
+Content-Type: application/json
+
+{
+  <span class="k">"amount"</span>: <span class="n">100</span>,
+  <span class="k">"category"</span>: <span class="s">"food"</span>
+}</pre>
+    </div></div>
+    <div class="row"><div class="lab">成功返回</div><div class="val">
+      <code>201</code>
+<pre>{
+  <span class="k">"id"</span>: <span class="n">7</span>,
+  <span class="k">"amount"</span>: <span class="n">100.0</span>,
+  <span class="k">"category"</span>: <span class="s">"food"</span>,
+  <span class="k">"date"</span>: <span class="s">"2026-05-15T10:30:00"</span>,
+  <span class="k">"created_at"</span>: <span class="s">"2026-05-15T10:30:00"</span>,
+  <span class="k">"user_id"</span>: <span class="n">1</span>
+}</pre>
+      <b>重点：</b><code>user_id</code> 你根本没传，系统自动填了你的 id——它只认 token，不认你嘴上说的。
+      这是<b>最值钱的一条安全检查</b>：故意在请求里塞别人的 user_id，看它会不会被忽悠（用例 TRX-019）。
+    </div></div>
+    <div class="row"><div class="lab">会失败的情况</div><div class="val">
+      <table>
+        <tr><th>情况</th><th>码</th><th>指向字段</th></tr>
+        <tr><td>金额 0 / 负数 / "abc" / null / 没传</td><td>422</td><td>amount</td></tr>
+        <tr><td>分类空串 / 没传 / 超过 100 字 / 传了数字</td><td>422</td><td>category</td></tr>
+        <tr><td>日期格式乱写 <code>2026/13/45</code></td><td>422</td><td>date</td></tr>
+        <tr><td>没带 token</td><td>401</td><td>—</td></tr>
+      </table>
+    </div></div>
+    <div class="tags">对应测试用例：
+      <span class="tag">TRX-001 正常</span>
+      <span class="tag">TRX-005 金额0</span>
+      <span class="tag">TRX-011 分类空</span>
+      <span class="tag">TRX-019 属主篡改</span>
+    </div>
+  </div>
+</div>
+
+<!-- ---------------------------- 5 ---------------------------- -->
+<div class="ep">
+  <div class="ep-head">
+    <span class="m m-get">GET</span>
+    <span class="path">/transactions</span>
+    <span class="lock">要通行证</span>
+  </div>
+  <div class="ep-body">
+    <div class="row"><div class="lab">用户想干什么</div><div class="val">看看我记过哪些账，可以按条件筛</div></div>
+    <div class="row"><div class="lab">能加的条件</div><div class="val">
+      <table>
+        <tr><th>参数</th><th>作用</th><th>例子</th></tr>
+        <tr><td><code>category</code></td><td>只看某个分类（要一字不差）</td><td><code>?category=food</code></td></tr>
+        <tr><td><code>min_amount</code></td><td>金额不小于某数（含等于）</td><td><code>?min_amount=100</code></td></tr>
+        <tr><td><code>month</code></td><td>只看某年某月</td><td><code>?month=2026-05</code></td></tr>
+        <tr><td><code>date_from</code></td><td>从哪天起（含当天）</td><td><code>?date_from=2026-05-01</code></td></tr>
+        <tr><td><code>date_to</code></td><td>到哪天止（含当天）</td><td><code>?date_to=2026-05-31</code></td></tr>
+        <tr><td><code>sort</code></td><td>按时间升序 asc / 降序 desc（默认 desc）</td><td><code>?sort=asc</code></td></tr>
+      </table>
+    </div></div>
+    <div class="row"><div class="lab">成功返回</div><div class="val">
+      <code>200</code>　返回一个数组（没有数据就是 <code>[]</code>）
+<pre>[
+  { <span class="k">"id"</span>: <span class="n">8</span>, <span class="k">"amount"</span>: <span class="n">250.0</span>, <span class="k">"category"</span>: <span class="s">"food"</span>, <span class="k">"date"</span>: <span class="s">"2026-05-15T10:00:00"</span>, <span class="k">"created_at"</span>: <span class="s">"..."</span>, <span class="k">"user_id"</span>: <span class="n">1</span> },
+  { <span class="k">"id"</span>: <span class="n">7</span>, <span class="k">"amount"</span>: <span class="n">100.0</span>, <span class="k">"category"</span>: <span class="s">"food"</span>, <span class="k">"date"</span>: <span class="s">"2026-05-01T00:00:00"</span>, <span class="k">"created_at"</span>: <span class="s">"..."</span>, <span class="k">"user_id"</span>: <span class="n">1</span> }
+]</pre>
+    </div></div>
+    <div class="row"><div class="lab">会失败的情况</div><div class="val">
+      <table>
+        <tr><th>情况</th><th>码</th><th>返回</th></tr>
+        <tr><td><code>?sort=随机词</code></td><td>400</td><td><code>{"detail":"sort must be 'asc' or 'desc'"}</code></td></tr>
+        <tr><td><code>?month=2026-13</code></td><td>400</td><td><code>{"detail":"month must be in YYYY-MM format"}</code></td></tr>
+        <tr><td><code>?min_amount=abc</code></td><td>422</td><td>指向 query 里的 min_amount</td></tr>
+      </table>
+    </div></div>
+    <div class="warn">
+      <b>⚠ 这里有个真缺陷（你写测试报告能写进去）</b><br>
+      项目 README 上写着支持 <code>max_amount</code>、<code>start_date</code>、<code>end_date</code> 三个参数，
+      <strong>但代码里根本没实现</strong>。而且 FastAPI 会把不认识的多余参数<strong>悄悄忽略</strong>——
+      所以你传 <code>?max_amount=200</code>，它不会报错，而是<strong>把全部数据都还给你</strong>。
+      <br>这就是最危险的"假成功"：你以为筛过了，其实没筛。对应用例 TRX-048~050。
+    </div>
+    <div class="tags">对应测试用例：
+      <span class="tag">TRX-026 默认排序</span>
+      <span class="tag">TRX-034 按分类</span>
+      <span class="tag">TRX-037 金额边界</span>
+      <span class="tag">TRX-042 月份边界</span>
+      <span class="tag">TRX-048 文档参数失效</span>
+    </div>
+  </div>
+</div>
+
+<!-- ---------------------------- 6 ---------------------------- -->
+<div class="ep">
+  <div class="ep-head">
+    <span class="m m-get">GET</span>
+    <span class="path">/transactions/{id}</span>
+    <span class="lock">要通行证</span>
+  </div>
+  <div class="ep-body">
+    <div class="row"><div class="lab">用户想干什么</div><div class="val">只想看某一笔交易的详情</div></div>
+    <div class="row"><div class="lab">成功返回</div><div class="val"><code>200</code> + 一个交易对象（结构同上）</div></div>
+    <div class="row"><div class="lab">会失败的情况</div><div class="val">
+      <table>
+        <tr><th>情况</th><th>码</th></tr>
+        <tr><td>编号不存在</td><td>404 <code>{"detail":"Transaction not found"}</code></td></tr>
+        <tr><td><strong>这笔是别人的</strong></td><td><b>404</b>（不是 403！故意说"不存在"，免得坏人试探出你有多少数据）</td></tr>
+        <tr><td>编号写成 <code>abc</code></td><td>422</td></tr>
+        <tr><td>编号是 0 或负数</td><td>404</td></tr>
+      </table>
+    </div></div>
+    <div class="tags">对应测试用例：
+      <span class="tag">TRX-058 正常</span>
+      <span class="tag">TRX-059 不存在</span>
+      <span class="tag">TRX-060 查他人</span>
+    </div>
+  </div>
+</div>
+
+<!-- ---------------------------- 7 ---------------------------- -->
+<div class="ep">
+  <div class="ep-head">
+    <span class="m m-put">PUT</span>
+    <span class="path">/transactions/{id}</span>
+    <span class="lock">要通行证</span>
+  </div>
+  <div class="ep-body">
+    <div class="row"><div class="lab">用户想干什么</div><div class="val">记错了，改一下金额或分类</div></div>
+    <div class="row"><div class="lab">要填什么</div><div class="val">
+      <code>amount</code> 和 <code>category</code> <b>两个都必须传</b>（这接口是"整体替换"，不是"改一个"）
+    </div></div>
+    <div class="row"><div class="lab">成功返回</div><div class="val">
+      <code>200</code>
+<pre>{
+  <span class="k">"message"</span>: <span class="s">"Transaction updated"</span>,
+  <span class="k">"data"</span>: { <span class="k">"id"</span>: <span class="n">7</span>, <span class="k">"amount"</span>: <span class="n">150.0</span>, <span class="k">"category"</span>: <span class="s">"dining"</span>, ... }
+}</pre>
+      <b>注意：</b>这个接口的返回多了一层 <code>message</code> 包装，跟创建接口（直接返回对象）<b>不一样</b>。断言时要区分。
+    </div></div>
+    <div class="row"><div class="lab">会失败的情况</div><div class="val">
+      <table>
+        <tr><th>情况</th><th>码</th></tr>
+        <tr><td>只传了 amount，没传 category</td><td>422（不是"只改金额"）</td></tr>
+        <tr><td>金额改成 0</td><td>422</td></tr>
+        <tr><td>改别人的交易</td><td>404，且对方数据没被改</td></tr>
+        <tr><td>编号不存在</td><td>404</td></tr>
+      </table>
+    </div></div>
+    <div class="warn">
+      <b>⚠ 又一个真缺陷</b>：这个接口的请求模型里<b>有 date 字段</b>，但代码只把 amount 和 category 存进去了，
+      <strong>date 被悄悄丢掉</strong>。所以你"改日期"会返回 200、数据却没变——这叫"假成功"。对应用例 TRX-069。
+    </div>
+    <div class="tags">对应测试用例：
+      <span class="tag">TRX-064 正常更新</span>
+      <span class="tag">TRX-065 缺字段</span>
+      <span class="tag">TRX-066 改他人</span>
+      <span class="tag">TRX-069 date不生效</span>
+    </div>
+  </div>
+</div>
+
+<!-- ---------------------------- 8 ---------------------------- -->
+<div class="ep">
+  <div class="ep-head">
+    <span class="m m-delete">DELETE</span>
+    <span class="path">/transactions/{id}</span>
+    <span class="lock">要通行证</span>
+  </div>
+  <div class="ep-body">
+    <div class="row"><div class="lab">用户想干什么</div><div class="val">删掉某笔记错的账</div></div>
+    <div class="row"><div class="lab">成功返回</div><div class="val">
+      <code>200</code>
+<pre>{
+  <span class="k">"message"</span>: <span class="s">"Transaction deleted"</span>,
+  <span class="k">"deleted"</span>: { <span class="k">"id"</span>: <span class="n">7</span>, <span class="k">"amount"</span>: <span class="n">100.0</span>, ... }
+}</pre>
+      <b>删完再看</b>：<code>GET /transactions/7</code> 会变成 404。而且 <code>/stats</code> 的总额会同步减少。
+    </div></div>
+    <div class="row"><div class="lab">会失败的情况</div><div class="val">
+      <table>
+        <tr><th>情况</th><th>码</th></tr>
+        <tr><td>再删一次同一个（已经删了）</td><td>404</td></tr>
+        <tr><td>删别人的</td><td>404，且对方数据还在</td></tr>
+        <tr><td>编号不存在</td><td>404</td></tr>
+      </table>
+    </div></div>
+    <div class="tags">对应测试用例：
+      <span class="tag">TRX-073 正常删除</span>
+      <span class="tag">TRX-075 重复删除</span>
+      <span class="tag">TRX-076 删他人</span>
+      <span class="tag">TRX-079 删后统计同步</span>
+    </div>
+  </div>
+</div>
+
+<!-- ---------------------------- 9 ---------------------------- -->
+<div class="ep">
+  <div class="ep-head">
+    <span class="m m-post">POST</span>
+    <span class="path">/budgets</span>
+    <span class="lock">要通行证</span>
+  </div>
+  <div class="ep-body">
+    <div class="row"><div class="lab">用户想干什么</div><div class="val">设一个花销限额，比如"餐饮每月最多 1500"</div></div>
+    <div class="row"><div class="lab">要填什么</div><div class="val">
+      <code>name</code> 预算名称（1~100 字符）<br>
+      <code>limit</code> 限额（<b>必须大于 0</b>）
+    </div></div>
+    <div class="row"><div class="lab">成功返回</div><div class="val">
+      <code>201</code>
+<pre>{
+  <span class="k">"message"</span>: <span class="s">"Budget created"</span>,
+  <span class="k">"data"</span>: { <span class="k">"id"</span>: <span class="n">1</span>, <span class="k">"name"</span>: <span class="s">"月度餐饮"</span>, <span class="k">"limit"</span>: <span class="n">1500.0</span>, <span class="k">"user_id"</span>: <span class="n">1</span> }
+}</pre>
+    </div></div>
+    <div class="row"><div class="lab">会失败的情况</div><div class="val">
+      <table>
+        <tr><th>情况</th><th>码</th></tr>
+        <tr><td>name 空 / 超过 100 字 / 没传</td><td>422</td></tr>
+        <tr><td>limit 为 0 / 负数 / 没传</td><td>422</td></tr>
+      </table>
+    </div></div>
+    <div class="tip">
+      <b>注意：</b>这个系统的预算和交易<b>完全没关联</b>——设了"餐饮 1500"，系统不会算你已经花了多少，也不会提醒你超支。
+      它只是存了一个数字。这是产品层面的短板，写测试报告时可以当建议提。
+    </div>
+    <div class="tags">对应测试用例：
+      <span class="tag">BUD-001 正常</span>
+      <span class="tag">BUD-005 名称空</span>
+      <span class="tag">BUD-007 限额0</span>
+    </div>
+  </div>
+</div>
+
+<!-- ---------------------------- 10 ---------------------------- -->
+<div class="ep">
+  <div class="ep-head">
+    <span class="m m-get">GET</span>
+    <span class="path">/budgets</span>
+    <span class="lock">要通行证</span>
+  </div>
+  <div class="ep-body">
+    <div class="row"><div class="lab">用户想干什么</div><div class="val">看我设了哪些预算</div></div>
+    <div class="row"><div class="lab">成功返回</div><div class="val"><code>200</code> + 数组（没数据就是 <code>[]</code>）</div></div>
+    <div class="row"><div class="lab">会失败的情况</div><div class="val">没带 token → 401</div></div>
+    <div class="tags">对应测试用例：
+      <span class="tag">BUD-015 空列表</span>
+      <span class="tag">BUD-017 用户隔离</span>
+    </div>
+  </div>
+</div>
+
+<!-- ---------------------------- 11 ---------------------------- -->
+<div class="ep">
+  <div class="ep-head">
+    <span class="m m-get">GET</span>
+    <span class="path">/budgets/{id}</span>
+    <span class="lock">要通行证</span>
+  </div>
+  <div class="ep-body">
+    <div class="row"><div class="lab">用户想干什么</div><div class="val">看某一个预算的详情</div></div>
+    <div class="row"><div class="lab">成功返回</div><div class="val"><code>200</code> + <code>{"id":1,"name":"月度餐饮","limit":1500.0,"user_id":1}</code></div></div>
+    <div class="row"><div class="lab">会失败的情况</div><div class="val">
+      <table>
+        <tr><th>情况</th><th>码</th></tr>
+        <tr><td>不存在</td><td>404 <code>{"detail":"Budget not found"}</code></td></tr>
+        <tr><td>是别人的</td><td>404</td></tr>
+        <tr><td>编号非整数</td><td>422</td></tr>
+      </table>
+    </div></div>
+    <div class="tags">对应测试用例：
+      <span class="tag">BUD-019 正常</span>
+      <span class="tag">BUD-021 查他人</span>
+    </div>
+  </div>
+</div>
+
+<!-- ---------------------------- 12 ---------------------------- -->
+<div class="ep">
+  <div class="ep-head">
+    <span class="m m-put">PUT</span>
+    <span class="path">/budgets/{id}</span>
+    <span class="lock">要通行证</span>
+  </div>
+  <div class="ep-body">
+    <div class="row"><div class="lab">用户想干什么</div><div class="val">改预算的名称或限额</div></div>
+    <div class="row"><div class="lab">要填什么</div><div class="val"><code>name</code> 和 <code>limit</code> 两个都必须传</div></div>
+    <div class="row"><div class="lab">成功返回</div><div class="val">
+      <code>200</code>　<code>{"message":"Budget updated","data":{...}}</code>
+    </div></div>
+    <div class="row"><div class="lab">会失败的情况</div><div class="val">
+      <table>
+        <tr><th>情况</th><th>码</th></tr>
+        <tr><td>只传了 name</td><td>422</td></tr>
+        <tr><td>改别人的</td><td>404，且对方数据没变</td></tr>
+        <tr><td>不存在</td><td>404</td></tr>
+      </table>
+    </div></div>
+    <div class="tags">对应测试用例：
+      <span class="tag">BUD-023 正常</span>
+      <span class="tag">BUD-024 缺字段</span>
+      <span class="tag">BUD-025 改他人</span>
+    </div>
+  </div>
+</div>
+
+<!-- ---------------------------- 13 ---------------------------- -->
+<div class="ep">
+  <div class="ep-head">
+    <span class="m m-delete">DELETE</span>
+    <span class="path">/budgets/{id}</span>
+    <span class="lock">要通行证</span>
+  </div>
+  <div class="ep-body">
+    <div class="row"><div class="lab">用户想干什么</div><div class="val">删掉一个预算</div></div>
+    <div class="row"><div class="lab">成功返回</div><div class="val">
+      <code>200</code>　<code>{"message":"Budget deleted","deleted":{...}}</code>
+    </div></div>
+    <div class="row"><div class="lab">会失败的情况</div><div class="val">
+      <table>
+        <tr><th>情况</th><th>码</th></tr>
+        <tr><td>重复删</td><td>404</td></tr>
+        <tr><td>删别人的</td><td>404</td></tr>
+      </table>
+    </div></div>
+    <div class="tags">对应测试用例：
+      <span class="tag">BUD-030 正常</span>
+      <span class="tag">BUD-033 删他人</span>
+    </div>
+  </div>
+</div>
+
+<!-- ---------------------------- 14 ---------------------------- -->
+<div class="ep">
+  <div class="ep-head">
+    <span class="m m-get">GET</span>
+    <span class="path">/stats</span>
+    <span class="lock">要通行证</span>
+  </div>
+  <div class="ep-body">
+    <div class="row"><div class="lab">用户想干什么</div><div class="val">看汇总：一共花了多少、几笔、最贵是哪笔</div></div>
+    <div class="row"><div class="lab">能加的条件</div><div class="val"><code>?month=2026-05</code> 只看某个月（不传就是全部）</div></div>
+    <div class="row"><div class="lab">成功返回</div><div class="val">
+      <code>200</code>
+<pre>{
+  <span class="k">"total_expenses"</span>: <span class="n">350.0</span>,
+  <span class="k">"total_number"</span>: <span class="n">2</span>,
+  <span class="k">"max_amount"</span>: <span class="n">250.0</span>
+}</pre>
+      读作：一共花了 350 块，记了 2 笔，最贵那笔 250。<br>
+      <b>没有数据时</b>三个都是 0（不是 null、也不是 404）。
+    </div></div>
+    <div class="row"><div class="lab">会失败的情况</div><div class="val">
+      <table>
+        <tr><th>情况</th><th>码</th><th>返回</th></tr>
+        <tr><td><code>?month=2026</code>（缺月份）</td><td>400</td><td><code>month must be in YYYY-MM format</code></td></tr>
+        <tr><td><code>?month=abc</code></td><td>400</td><td>同上</td></tr>
+      </table>
+    </div></div>
+    <div class="warn">
+      <b>⚠ 第三个真缺陷</b>：<code>?month=2026-13</code> 这种非法月份，
+      <code>/transactions</code> 会返回 400，但 <code>/stats</code> 会<strong>返回 200 且全是 0</strong>。
+      同样一个参数，两个接口规则不一致——前端没法统一处理。对应用例 STAT-010。
+    </div>
+    <div class="row"><div class="lab">另一个坑</div><div class="val">
+      金额是用小数（float）存的，<code>0.1 + 0.2</code> 会算出 <code>0.30000000000000004</code>。
+      对记账系统来说这是硬伤（对账永远差几分钱）。对应用例 STAT-004。
+    </div></div>
+    <div class="tags">对应测试用例：
+      <span class="tag">STAT-001 空数据</span>
+      <span class="tag">STAT-003 合计</span>
+      <span class="tag">STAT-004 精度</span>
+      <span class="tag">STAT-007 按月</span>
+      <span class="tag">STAT-010 月份不一致</span>
+    </div>
+  </div>
+</div>
+
+<!-- ---------------------------- 15 ---------------------------- -->
+<div class="ep">
+  <div class="ep-head">
+    <span class="m m-get">GET</span>
+    <span class="path">/</span>
+    <span class="open">不需要通行证</span>
+  </div>
+  <div class="ep-body">
+    <div class="row"><div class="lab">用户想干什么</div><div class="val">没有用户——这是给运维用的"你活着吗"探针</div></div>
+    <div class="row"><div class="lab">成功返回</div><div class="val">
+      <code>200</code>　<code>{"message": "API is working"}</code>
+    </div></div>
+    <div class="tags">对应测试用例：<span class="tag">GEN-001</span></div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="codes">四、状态码速查</h2>
+
+<table>
+  <tr><th>码</th><th>什么时候出现</th><th>返回长什么样</th></tr>
+  <tr><td><code>200</code></td><td>查询/更新/删除成功</td><td>业务数据</td></tr>
+  <tr><td><code>201</code></td><td>注册、建交易、建预算成功</td><td>新建出来的对象</td></tr>
+  <tr><td><code>400</code></td><td>业务规则不允许：邮箱重复、sort 非法、month 格式错</td><td><code>{"detail":"一句话说明"}</code></td></tr>
+  <tr><td><code>401</code></td><td>没带 token（Not authenticated）／token 无效（Invalid token）／账号密码错（Invalid credentials）</td><td><code>{"detail":"..."}</code></td></tr>
+  <tr><td><code>404</code></td><td>编号不存在，或东西是别人的</td><td><code>{"detail":"... not found"}</code></td></tr>
+  <tr><td><code>422</code></td><td>字段格式不对</td><td><code>{"detail":[{"type","loc","msg","input"}]}</code></td></tr>
+  <tr><td><code>500</code></td><td>服务器崩了</td><td>一般没有规范结构 → <b>提缺陷</b></td></tr>
+</table>
+
+<div class="tip">
+  <b>400 和 422 的区别（最容易混）：</b><br>
+  <code>422</code> = <b>电脑在挑你毛病</b>："你这个字段类型/长度不对"（发生在业务逻辑执行之前，框架自动拦）。<br>
+  <code>400</code> = <b>人在挑你毛病</b>："你要求的事业务上办不了"（比如这邮箱已经有人用了，代码里手动抛的）。
+</div>
+
+<!-- ============================================================ -->
+<h2 id="howto">五、我自己怎么发一个请求试试</h2>
+
+<p>三种方式，从简单到正式：</p>
+
+<h3>方式 1：用 PowerShell（Windows 自带，最省事）</h3>
+<pre><span class="k"># 探活</span>
+Invoke-RestMethod -Uri <span class="s">"http://127.0.0.1:8000/"</span>
+
+<span class="k"># 注册</span>
+$body = @{ email = <span class="s">"try01@example.com"</span>; password = <span class="s">"Passw0rd!23"</span> } | ConvertTo-Json
+Invoke-RestMethod -Uri <span class="s">"http://127.0.0.1:8000/register"</span> -Method Post -Body $body -ContentType <span class="s">"application/json"</span>
+
+<span class="k"># 登录拿 token</span>
+$login = @{ email = <span class="s">"try01@example.com"</span>; password = <span class="s">"Passw0rd!23"</span> } | ConvertTo-Json
+$token = (Invoke-RestMethod -Uri <span class="s">"http://127.0.0.1:8000/login"</span> -Method Post -Body $login -ContentType <span class="s">"application/json"</span>).access_token
+
+<span class="k"># 带 token 记一笔</span>
+$h = @{ Authorization = <span class="s">"Bearer $token"</span> }
+$trx = @{ amount = 100; category = <span class="s">"food"</span> } | ConvertTo-Json
+Invoke-RestMethod -Uri <span class="s">"http://127.0.0.1:8000/transactions"</span> -Method Post -Headers $h -Body $trx -ContentType <span class="s">"application/json"</span></pre>
+
+<h3>方式 2：用 Python（就是你写测试用的那个）</h3>
+<pre><span class="k">import</span> requests
+
+BASE = <span class="s">"http://127.0.0.1:8000"</span>
+r = requests.post(<span class="s">f"{BASE}/login"</span>, json={<span class="s">"email"</span>: <span class="s">"try01@example.com"</span>, <span class="s">"password"</span>: <span class="s">"Passw0rd!23"</span>})
+token = r.json()[<span class="s">"access_token"</span>]
+
+r = requests.post(<span class="s">f"{BASE}/transactions"</span>,
+                  json={<span class="s">"amount"</span>: 100, <span class="s">"category"</span>: <span class="s">"food"</span>},
+                  headers={<span class="s">"Authorization"</span>: <span class="s">f"Bearer {token}"</span>})
+<span class="k">print</span>(r.status_code, r.json())</pre>
+
+<h3>方式 3：用那个我给你的小前端（点点鼠标就行）</h3>
+<p><code>D:\personal-finance-tracker-api\api_test\mini_frontend.html</code>，用带 <code>--disable-web-security</code> 的 Chrome 打开，能填表单、点按钮、看返回。</p>
+
+<div class="danger">
+  <b>⚠ 记住一句话：这个文档里的每个"会失败的情况"，就是你的一条测试用例。</b><br>
+  不需要背，也不需要灵感——后台每多一道检查，就多一个"它没检查好"的可能，那就是你要测的点。
+</div>
+
+<p style="margin-top:40px;color:#94a3b8;font-size:12px;border-top:1px solid #e2e8f0;padding-top:14px">
+  本文档根据项目源码（app/routes/*.py、app/schemas.py、app/services/stats.py）逐行核对生成，不是从 README 抄的。
+  示例响应均为真实结构，可直接用于编写断言。
+</p>
+
+</body>
+</html>

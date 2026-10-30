@@ -1,0 +1,27 @@
+# 忽略规则（个人记账 API 测试项目）
+
+# 系统文件
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+venv/
+.venv/
+*.egg-info/
+
+# 测试产物（保留 report.html 作为示例报告）
+.ipynb_checkpoints/
+
+# 临时文件
+*.tmp
+*.log
+~$*

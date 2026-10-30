@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>记账 API · 全接口演练台</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    background: #f4f6f9; color: #23282f; font-size: 14px; height: 100vh;
+    display: flex; flex-direction: column;
+  }
+  header {
+    background: #16324f; color: #fff; padding: 10px 18px;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap; flex: 0 0 auto;
+  }
+  header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+  header .who { font-size: 12.5px; color: #b8cbe0; display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+  header .who b { color: #fff; }
+  header button {
+    background: #2e5c8a; color: #fff; border: 0; border-radius: 4px;
+    padding: 5px 12px; font-size: 12.5px; cursor: pointer;
+  }
+  header button:hover { background: #3f78b3; }
+  header button.alt { background: #2f4f6f; }
+
+  .layout { display: flex; flex: 1 1 auto; overflow: hidden; }
+
+  aside {
+    width: 260px; flex: 0 0 260px; background: #fff; border-right: 1px solid #dde5ee;
+    overflow-y: auto; padding: 8px 0;
+  }
+  .group-title {
+    font-size: 11.5px; color: #94a3b8; padding: 10px 16px 4px; letter-spacing: .5px;
+  }
+  .ep-item {
+    padding: 7px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px;
+    font-size: 13px; border-left: 3px solid transparent;
+  }
+  .ep-item:hover { background: #f1f5f9; }
+  .ep-item.active { background: #e8f0fa; border-left-color: #2563eb; font-weight: 600; }
+  .m { font-family: Consolas, monospace; font-size: 10.5px; font-weight: bold; color: #fff;
+       padding: 2px 6px; border-radius: 3px; flex: 0 0 auto; }
+  .m-get { background: #16a34a; } .m-post { background: #2563eb; }
+  .m-put { background: #ea580c; } .m-delete { background: #dc2626; }
+  .ep-item .p { font-family: Consolas, monospace; font-size: 12px; overflow: hidden;
+                text-overflow: ellipsis; white-space: nowrap; }
+
+  main { flex: 1 1 auto; overflow-y: auto; padding: 20px 24px 60px; }
+  .ep-title { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+  .ep-title .path { font-family: Consolas, monospace; font-size: 19px; font-weight: bold; color: #16324f; }
+  .badge { font-size: 11.5px; padding: 2px 9px; border-radius: 10px; }
+  .badge.lock { background: #fef3c7; color: #b45309; }
+  .badge.open { background: #d1fae5; color: #0f766e; }
+  .desc { color: #64748b; margin-bottom: 16px; font-size: 13.5px; }
+
+  .panel { background: #fff; border: 1px solid #dde5ee; border-radius: 8px; padding: 16px 18px; margin-bottom: 16px; }
+  .panel h3 { margin: 0 0 12px; font-size: 13.5px; color: #475569; font-weight: 600; }
+  .field { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; flex-wrap: wrap; }
+  .field label { width: 190px; flex: 0 0 190px; font-size: 13px; color: #334155; }
+  .field label .tag { font-size: 10.5px; color: #94a3b8; background: #f1f5f9;
+                      padding: 1px 5px; border-radius: 3px; margin-left: 4px; }
+  .field input { flex: 1 1 240px; padding: 6px 9px; border: 1px solid #cfd8e3;
+                 border-radius: 4px; font-size: 13px; font-family: Consolas, monospace; }
+  .field input:focus { outline: none; border-color: #2563eb; }
+
+  .actions { display: flex; gap: 10px; align-items: center; margin: 4px 0 18px; flex-wrap: wrap; }
+  .send {
+    background: #2563eb; color: #fff; border: 0; border-radius: 5px;
+    padding: 9px 26px; font-size: 14px; cursor: pointer; font-weight: 600;
+  }
+  .send:hover { background: #1d4ed8; }
+  .send:disabled { background: #94a3b8; cursor: not-allowed; }
+  .url-preview { font-family: Consolas, monospace; font-size: 12px; color: #64748b;
+                 background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 4px;
+                 padding: 7px 10px; word-break: break-all; flex: 1 1 300px; }
+
+  .resp-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+  .status { font-family: Consolas, monospace; font-size: 20px; font-weight: bold; }
+  .s2 { color: #16a34a; } .s3 { color: #b45309; } .s4 { color: #dc2626; } .s5 { color: #7f1d1d; }
+  .ms { font-size: 12px; color: #94a3b8; }
+  pre {
+    background: #1d2431; color: #dfe8f3; padding: 14px 16px; border-radius: 8px;
+    font-size: 12.5px; line-height: 1.7; overflow: auto; margin: 0; max-height: 46vh;
+    font-family: Consolas, "Courier New", monospace;
+  }
+  .hint { background: #fff8e1; border-left: 3px solid #f59e0b; padding: 9px 13px;
+          font-size: 12.5px; border-radius: 4px; margin-bottom: 14px; line-height: 1.75; }
+  .hint b { color: #92400e; }
+  .empty { color: #94a3b8; font-size: 13px; padding: 16px 0; }
+  .cors-warn { background: #fdecec; border-left: 4px solid #dc2626; color: #7f1d1d;
+               padding: 12px 16px; border-radius: 6px; margin-bottom: 16px; font-size: 13px; display: none; }
+  .cors-warn code { background: #fee2e2; color: #991b1b; padding: 1px 5px; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>记账 API · 全接口演练台</h1>
+  <div class="who">
+    当前身份：<b id="whoName">未登录</b>
+    <button onclick="quickSetup()">① 一键准备环境</button>
+    <button class="alt" onclick="clearToken()">清空 token</button>
+    <button class="alt" onclick="toggleToken()">显示/隐藏 token</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside id="menu"></aside>
+  <main>
+    <div class="cors-warn" id="corsWarn">
+      <b>跨域被浏览器拦了。</b><br>
+      这个 API 没有配置 CORS，所以必须用「关闭跨域检查」的 Chrome 打开本页面：<br>
+      <code>chrome.exe --user-data-dir=%TEMP%\cors-off --disable-web-security "file:///D:/personal-finance-tracker-api/全接口演练台.html"</code>
+    </div>
+
+    <div class="ep-title">
+      <span class="m" id="epMethod">GET</span>
+      <span class="path" id="epPath">/</span>
+      <span class="badge" id="epAuth"></span>
+    </div>
+    <div class="desc" id="epDesc"></div>
+
+    <div class="hint" id="epHint"></div>
+
+    <div class="panel">
+      <h3>请求参数（灰色的行表示可以不填）</h3>
+      <div id="form"></div>
+    </div>
+
+    <div class="actions">
+      <button class="send" id="sendBtn" onclick="send()">发送请求</button>
+      <div class="url-preview" id="urlPreview"></div>
+    </div>
+
+    <div class="panel">
+      <div class="resp-head">
+        <h3 style="margin:0">响应</h3>
+        <span class="status" id="status"></span>
+        <span class="ms" id="ms"></span>
+      </div>
+      <pre id="resp">（还没发过请求）</pre>
+    </div>
+  </main>
+</div>
+
+<script>
+/* ============================================================
+   后端地址：如果服务不在 8000，改这里
+   ============================================================ */
+const BASE = "http://127.0.0.1:8000";
+
+let token = "";
+let email = "";
+let lastTrxId = "";
+let lastBudgetId = "";
+
+/* ============================================================
+   全部 15 个接口的定义
+   ============================================================ */
+const ENDPOINTS = [
+  /* ---------- 认证 ---------- */
+  {
+    id: "register", group: "① 认证", method: "POST", path: "/register", auth: false,
+    desc: "注册一个新用户。密码至少 8 位，邮箱不能重复注册。",
+    hint: "期望 <b>201</b>。若返回 400 说明邮箱已注册；返回 422 说明字段格式不对。",
+    fields: [
+      { k: "email", label: "邮箱", in: "body", def: "ui01@example.com" },
+      { k: "password", label: "密码（≥8位）", in: "body", def: "Passw0rd!23" }
+    ]
+  },
+  {
+    id: "login", group: "① 认证", method: "POST", path: "/login", auth: false,
+    desc: "用邮箱密码换通行证（token）。拿到后会自动填入，后面接口就不用管了。",
+    hint: "期望 <b>200</b> + access_token。返回 401 说明邮箱不存在或密码错（两种情况的提示一模一样，是故意设计）。",
+    fields: [
+      { k: "email", label: "邮箱", in: "body", def: "ui01@example.com" },
+      { k: "password", label: "密码", in: "body", def: "Passw0rd!23" }
+    ],
+    onSuccess: (data) => { if (data && data.access_token) { token = data.access_token; email = formValues.email || email; } }
+  },
+  {
+    id: "me", group: "① 认证", method: "GET", path: "/me", auth: true,
+    desc: "问系统『你还认得我是谁吗』，返回你的 user_id。用来验证 token 有没有效。",
+    hint: "期望 <b>200</b> + {\"user_id\":1}。没带 token → 401 Not authenticated；token 假/过期 → 401 Invalid token。",
+    fields: []
+  },
+
+  /* ---------- 交易 ---------- */
+  {
+    id: "createTrx", group: "② 交易", method: "POST", path: "/transactions", auth: true,
+    desc: "记一笔花销。金额必须大于 0，分类 1~100 字，日期可不填（默认现在）。",
+    hint: "期望 <b>201</b>。注意返回里的 user_id 是系统从 token 里认出来的，<b>不是你传的</b>。金额 0/负数 → 422。",
+    fields: [
+      { k: "amount", label: "金额（>0）", in: "body", def: "100", num: true },
+      { k: "category", label: "分类", in: "body", def: "food" },
+      { k: "date", label: "时间（可空）", in: "body", def: "2026-05-15T10:30:00", optional: true }
+    ],
+    onSuccess: (data) => { if (data && data.id) lastTrxId = data.id; }
+  },
+  {
+    id: "listTrx", group: "② 交易", method: "GET", path: "/transactions", auth: true,
+    desc: "查我记了哪些账，可以按分类、金额、月份、日期区间筛选，还能排序。",
+    hint: "期望 <b>200</b> + 数组。全空就是 []。<code>?month=2026-13</code> → 400；<code>?sort=abc</code> → 400；<code>?min_amount=abc</code> → 422。",
+    fields: [
+      { k: "category", label: "分类（精确匹配）", in: "query", def: "", optional: true },
+      { k: "min_amount", label: "金额下限（含等于）", in: "query", def: "", optional: true, num: true },
+      { k: "month", label: "月份 YYYY-MM", in: "query", def: "", optional: true },
+      { k: "date_from", label: "起始日期（含当天）", in: "query", def: "", optional: true },
+      { k: "date_to", label: "结束日期（含当天）", in: "query", def: "", optional: true },
+      { k: "sort", label: "排序 asc / desc", in: "query", def: "desc", optional: true }
+    ]
+  },
+  {
+    id: "getTrx", group: "② 交易", method: "GET", path: "/transactions/{id}", auth: true,
+    desc: "只看某一笔交易的详情。",
+    hint: "期望 <b>200</b>。编号不存在 → 404；<b>别人的交易也是 404</b>（故意不泄露存在性）。",
+    fields: [ { k: "id", label: "交易编号", in: "path", def: "1", num: true } ]
+  },
+  {
+    id: "updateTrx", group: "② 交易", method: "PUT", path: "/transactions/{id}", auth: true,
+    desc: "改某一笔交易的金额和分类。注意：这是『整体替换』，两个字段都必须传。",
+    hint: "期望 <b>200</b> + {message, data}。只传 amount 会 <b>422</b>。改别人的 → 404。<br><b>已知缺陷</b>：传 date 不生效。",
+    fields: [
+      { k: "id", label: "交易编号", in: "path", def: "1", num: true },
+      { k: "amount", label: "新金额", in: "body", def: "150", num: true },
+      { k: "category", label: "新分类", in: "body", def: "dining" }
+    ]
+  },
+  {
+    id: "deleteTrx", group: "② 交易", method: "DELETE", path: "/transactions/{id}", auth: true,
+    desc: "删掉某一笔交易。删完后 /stats 的合计会同步变少。",
+    hint: "期望 <b>200</b> + {message, deleted}。再删一次 → 404。删别人的 → 404 且对方数据还在。",
+    fields: [ { k: "id", label: "交易编号", in: "path", def: "1", num: true } ]
+  },
+
+  /* ---------- 预算 ---------- */
+  {
+    id: "createBudget", group: "③ 预算", method: "POST", path: "/budgets", auth: true,
+    desc: "设一个花销限额，比如『餐饮每月最多 1500』。注意它和交易没有任何关联，系统不会算你花了多少。",
+    hint: "期望 <b>201</b> + {message, data}。name 空或超 100 字 → 422；limit 为 0 或负数 → 422。",
+    fields: [
+      { k: "name", label: "预算名称", in: "body", def: "月度餐饮" },
+      { k: "limit", label: "限额（>0）", in: "body", def: "1500", num: true }
+    ],
+    onSuccess: (data) => { if (data && data.data && data.data.id) lastBudgetId = data.data.id; }
+  },
+  {
+    id: "listBudget", group: "③ 预算", method: "GET", path: "/budgets", auth: true,
+    desc: "看我设了哪些预算。只能看到自己的。",
+    hint: "期望 <b>200</b> + 数组，没有就是 []。",
+    fields: []
+  },
+  {
+    id: "getBudget", group: "③ 预算", method: "GET", path: "/budgets/{id}", auth: true,
+    desc: "看某一个预算的详情。",
+    hint: "期望 <b>200</b>。不存在 → 404 Budget not found；别人的 → 404。",
+    fields: [ { k: "id", label: "预算编号", in: "path", def: "1", num: true } ]
+  },
+  {
+    id: "updateBudget", group: "③ 预算", method: "PUT", path: "/budgets/{id}", auth: true,
+    desc: "改预算的名称或限额，两个字段都必须传。",
+    hint: "期望 <b>200</b> + {message, data}。只传 name → 422。改别人的 → 404。",
+    fields: [
+      { k: "id", label: "预算编号", in: "path", def: "1", num: true },
+      { k: "name", label: "新名称", in: "body", def: "年度餐饮" },
+      { k: "limit", label: "新限额", in: "body", def: "2000", num: true }
+    ]
+  },
+  {
+    id: "deleteBudget", group: "③ 预算", method: "DELETE", path: "/budgets/{id}", auth: true,
+    desc: "删掉一个预算。",
+    hint: "期望 <b>200</b> + {message, deleted}。再删 → 404。",
+    fields: [ { k: "id", label: "预算编号", in: "path", def: "1", num: true } ]
+  },
+
+  /* ---------- 统计 ---------- */
+  {
+    id: "stats", group: "④ 统计", method: "GET", path: "/stats", auth: true,
+    desc: "看汇总：一共花了多少、记了几笔、最贵哪笔。可以只看某个月。",
+    hint: "期望 <b>200</b> + {total_expenses, total_number, max_amount}。没数据时三个都是 0。<br><b>已知缺陷</b>：<code>?month=2026-13</code> 这里返回 200 全 0，而交易接口同样参数返回 400。",
+    fields: [ { k: "month", label: "月份（可空）", in: "query", def: "", optional: true } ]
+  },
+
+  /* ---------- 通用 ---------- */
+  {
+    id: "root", group: "⑤ 通用", method: "GET", path: "/", auth: false,
+    desc: "探活：确认服务还活着。不需要任何参数。",
+    hint: "期望 <b>200</b> + {\"message\":\"API is working\"}。",
+    fields: []
+  }
+];
+
+/* ============================================================ */
+let current = ENDPOINTS[0];
+let formValues = {};
+
+/* ---------- 左侧菜单 ---------- */
+function renderMenu() {
+  const menu = document.getElementById("menu");
+  let html = "";
+  let lastGroup = "";
+  ENDPOINTS.forEach((ep) => {
+    if (ep.group !== lastGroup) {
+      html += `<div class="group-title">${ep.group}</div>`;
+      lastGroup = ep.group;
+    }
+    const cls = (ep.id === current.id) ? "ep-item active" : "ep-item";
+    html += `<div class="${cls}" onclick="selectEp('${ep.id}')">
+      <span class="m m-${ep.method.toLowerCase()}">${ep.method}</span>
+      <span class="p">${ep.path}</span>
+    </div>`;
+  });
+  menu.innerHTML = html;
+}
+
+/* ---------- 选中某接口 ---------- */
+function selectEp(id) {
+  current = ENDPOINTS.find((e) => e.id === id);
+  formValues = {};
+  renderMenu();
+  renderForm();
+  document.getElementById("resp").textContent = "（还没发过请求）";
+  document.getElementById("status").textContent = "";
+  document.getElementById("ms").textContent = "";
+}
+
+/* ---------- 渲染表单 ---------- */
+function renderForm() {
+  document.getElementById("epMethod").className = "m m-" + current.method.toLowerCase();
+  document.getElementById("epMethod").textContent = current.method;
+  document.getElementById("epPath").textContent = current.path;
+  const auth = document.getElementById("epAuth");
+  auth.textContent = current.auth ? "需要 token" : "不需要 token";
+  auth.className = "badge " + (current.auth ? "lock" : "open");
+  document.getElementById("epDesc").textContent = current.desc;
+  document.getElementById("epHint").innerHTML = current.hint || "";
+
+  const form = document.getElementById("form");
+  if (!current.fields.length) {
+    form.innerHTML = '<div class="empty">这个接口不需要任何参数，直接点「发送请求」。</div>';
+  } else {
+    form.innerHTML = current.fields.map((f) => {
+      let def = f.def;
+      if (f.k === "id" && current.path.indexOf("/transactions") === 0) def = lastTrxId || f.def;
+      if (f.k === "id" && current.path.indexOf("/budgets") === 0) def = lastBudgetId || f.def;
+      if (f.k === "email" && email) def = email;
+      const tagMap = { body: "请求体", query: "URL 参数", path: "路径" };
+      return `<div class="field">
+        <label>${f.label}<span class="tag">${tagMap[f.in]}</span></label>
+        <input id="f_${f.k}" value="${def}" placeholder="${f.optional ? "可留空" : ""}">
+      </div>`;
+    }).join("");
+  }
+  updatePreview();
+  form.querySelectorAll("input").forEach((inp) => {
+    inp.addEventListener("input", updatePreview);
+  });
+}
+
+/* ---------- 拼出最终 URL ---------- */
+function buildUrl() {
+  let path = current.path;
+  const qs = [];
+  current.fields.forEach((f) => {
+    const el = document.getElementById("f_" + f.k);
+    const raw = el ? el.value.trim() : "";
+    if (f.in === "path") {
+      path = path.replace("{" + f.k + "}", raw || "1");
+    } else if (f.in === "query") {
+      if (raw !== "") qs.push(encodeURIComponent(f.k) + "=" + encodeURIComponent(raw));
+    }
+  });
+  return BASE + path + (qs.length ? "?" + qs.join("&") : "");
+}
+
+function buildBody() {
+  const body = {};
+  current.fields.forEach((f) => {
+    if (f.in !== "body") return;
+    const el = document.getElementById("f_" + f.k);
+    let raw = el ? el.value.trim() : "";
+    if (raw === "") return;
+    body[f.k] = f.num ? Number(raw) : raw;
+  });
+  return body;
+}
+
+function updatePreview() {
+  const url = buildUrl();
+  let preview = url;
+  const b = buildBody();
+  if (Object.keys(b).length) preview += "　body=" + JSON.stringify(b);
+  document.getElementById("urlPreview").textContent = preview;
+}
+
+/* ---------- 发送请求 ---------- */
+async function send() {
+  const btn = document.getElementById("sendBtn");
+  btn.disabled = true;
+  btn.textContent = "请求中...";
+  const corsWarn = document.getElementById("corsWarn");
+  corsWarn.style.display = "none";
+
+  const url = buildUrl();
+  const headers = { "Content-Type": "application/json" };
+  if (current.auth) {
+    if (!token) {
+      document.getElementById("status").textContent = "⚠ 没有 token";
+      document.getElementById("status").className = "status s3";
+      document.getElementById("resp").textContent =
+        "当前没有 token。\n先点右上角「① 一键准备环境」，或者先调 /login 拿一个。\n\n" +
+        "（也可以手动：/login 成功后会显示 access_token，点「显示/隐藏 token」可查看）";
+      btn.disabled = false; btn.textContent = "发送请求";
+      return;
+    }
+    headers["Authorization"] = "Bearer " + token;
+  }
+
+  const opts = { method: current.method, headers };
+  if (current.method === "POST" || current.method === "PUT") {
+    opts.body = JSON.stringify(buildBody());
+  }
+
+  const t0 = performance.now();
+  try {
+    const resp = await fetch(url, opts);
+    const dt = Math.round(performance.now() - t0);
+    let text = await resp.text();
+    let data;
+    try { data = JSON.parse(text); } catch (e) { data = text; }
+
+    const st = document.getElementById("status");
+    st.textContent = resp.status + " " + (resp.statusText || "");
+    st.className = "status s" + String(resp.status).charAt(0);
+    document.getElementById("ms").textContent = "耗时 " + dt + " ms";
+    document.getElementById("resp").textContent =
+      "请求: " + current.method + " " + url + "\n" +
+      (opts.body ? "请求体: " + opts.body + "\n" : "") +
+      "响应: " + JSON.stringify(data, null, 2);
+
+    // 记住刚创建出来的 id，方便后面直接测试
+    if ((current.id === "createTrx" || current.id === "createBudget") && data) {
+      if (current.onSuccess) current.onSuccess(data);
+    }
+    if (current.id === "login" && data && data.access_token) {
+      token = data.access_token;
+      const em = document.getElementById("f_email");
+      if (em) email = em.value.trim();
+      updateWho();
+    }
+    if (current.id === "register" && data && data.email) {
+      email = data.email;
+    }
+    updateWho();
+  } catch (err) {
+    corsWarn.style.display = "block";
+    document.getElementById("status").textContent = "请求失败";
+    document.getElementById("status").className = "status s5";
+    document.getElementById("resp").textContent =
+      "请求没发出去。\n\n技术原因：" + err.message + "\n\n" +
+      "最可能的原因：\n" +
+      "1) 服务没启动 → 先在另一个终端跑 uvicorn\n" +
+      "2) 浏览器跨域被拦 → 用 --disable-web-security 打开本页（见上方红框）";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "发送请求";
+  }
+}
+
+/* ---------- 身份显示 ---------- */
+function updateWho() {
+  const el = document.getElementById("whoName");
+  if (token) {
+    el.textContent = (email || "已登录") + "　token: " + token.slice(0, 18) + "…";
+  } else {
+    el.textContent = "未登录（大部分接口需要先登录）";
+  }
+}
+
+function clearToken() {
+  token = ""; email = "";
+  updateWho();
+}
+
+function toggleToken() {
+  if (!token) { alert("还没有 token，先点「一键准备环境」"); return; }
+  alert("完整 token：\n\n" + token);
+}
+
+/* ============================================================
+   一键准备环境：注册 → 登录 → 造 3 笔数据 → 建 1 个预算
+   ============================================================ */
+async function quickSetup() {
+  const btn = document.querySelector("header button");
+  btn.disabled = true;
+  const oldText = btn.textContent;
+  btn.textContent = "准备中...";
+  const log = [];
+  const rnd = Math.random().toString(36).slice(2, 8);
+  const mail = "ui_" + rnd + "@example.com";
+  const pwd = "Passw0rd!23";
+
+  try {
+    // 1) 注册
+    let r = await fetch(BASE + "/register", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: mail, password: pwd })
+    });
+    log.push("注册 " + r.status + (r.status === 201 ? " ✓" : " ✗"));
+
+    // 2) 登录
+    r = await fetch(BASE + "/login", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: mail, password: pwd })
+    });
+    const loginData = await r.json();
+    log.push("登录 " + r.status + (r.status === 200 ? " ✓" : " ✗"));
+    if (!loginData.access_token) throw new Error("登录没拿到 token");
+    token = loginData.access_token;
+    email = mail;
+    updateWho();
+
+    // 3) 造 3 笔交易
+    const plan = [
+      { amount: 100, category: "food", date: "2026-05-01T00:00:00" },
+      { amount: 250, category: "food", date: "2026-05-15T10:00:00" },
+      { amount: 50, category: "transport", date: "2026-06-01T00:00:00" }
+    ];
+    const ids = [];
+    for (const t of plan) {
+      const rr = await fetch(BASE + "/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify(t)
+      });
+      const d = await rr.json();
+      if (d.id) ids.push(d.id);
+    }
+    if (ids.length) lastTrxId = ids[0];
+    log.push("造数据 " + ids.length + "/3 笔 ✓（编号 " + ids.join(", ") + "）");
+
+    // 4) 建一个预算
+    const rb = await fetch(BASE + "/budgets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+      body: JSON.stringify({ name: "月度餐饮", limit: 1500 })
+    });
+    const bd = await rb.json();
+    if (bd.data && bd.data.id) lastBudgetId = bd.data.id;
+    log.push("建预算 " + rb.status + (bd.data ? " ✓（编号 " + bd.data.id + "）" : ""));
+
+    document.getElementById("resp").textContent =
+      "环境准备好了！\n\n" + log.join("\n") +
+      "\n\n当前账号：" + mail + " / " + pwd +
+      "\n交易编号：" + (ids.join(", ") || "无") +
+      "\n预算编号：" + (lastBudgetId || "无") +
+      "\n\n现在你可以：\n" +
+      "· 点左边「GET /transactions」，加个 month=2026-05 试试筛选\n" +
+      "· 点「GET /stats」，看合计是不是 400（100+250+50）\n" +
+      "· 点「GET /transactions/{id}」，用上面的交易编号查单笔";
+    document.getElementById("status").textContent = "准备完成";
+    document.getElementById("status").className = "status s2";
+    document.getElementById("ms").textContent = "";
+    renderForm();
+  } catch (e) {
+    document.getElementById("corsWarn").style.display = "block";
+    document.getElementById("resp").textContent = "准备环境失败：\n" + e.message +
+      "\n\n检查服务是否启动，以及是否用 --disable-web-security 打开本页。";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = oldText;
+  }
+}
+
+/* ---------- 启动 ---------- */
+renderMenu();
+renderForm();
+updateWho();
+</script>
+</body>
+</html>

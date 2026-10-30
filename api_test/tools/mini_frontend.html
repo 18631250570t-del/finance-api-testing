@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>记账小前台（教学用）</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Microsoft YaHei", Arial, sans-serif; margin: 0; padding: 24px;
+         background: #f5f7fa; color: #222; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h1 small { font-size: 12px; color: #888; font-weight: normal; }
+  .tip { background: #fff8e1; border-left: 4px solid #ffb300; padding: 10px 14px;
+         font-size: 13px; line-height: 1.7; margin: 12px 0 20px; border-radius: 4px; }
+  section { background: #fff; border: 1px solid #e3e8ee; border-radius: 8px;
+            padding: 16px 18px; margin-bottom: 16px; }
+  h2 { font-size: 15px; margin: 0 0 12px; color: #1f3864; }
+  label { display: inline-block; margin-right: 14px; font-size: 13px; }
+  input { padding: 6px 8px; border: 1px solid #cfd8e3; border-radius: 4px;
+          font-size: 13px; width: 190px; }
+  button { padding: 7px 16px; margin-right: 8px; border: 0; border-radius: 4px;
+           background: #2e5c8a; color: #fff; font-size: 13px; cursor: pointer; }
+  button:hover { background: #1f3864; }
+  button.ghost { background: #eef3f9; color: #2e5c8a; }
+  .state { margin-top: 12px; font-size: 13px; }
+  .ok { color: #1a7f37; }
+  .bad { color: #c0392b; }
+  #stats { display: flex; gap: 24px; margin: 12px 0; font-size: 14px; }
+  #stats div { background: #eef3f9; border-radius: 6px; padding: 10px 16px; }
+  #stats b { display: block; font-size: 20px; color: #2e5c8a; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { border-bottom: 1px solid #e3e8ee; padding: 7px 6px; text-align: left; }
+  th { color: #666; font-weight: normal; }
+  pre { background: #1e2430; color: #d6e2f0; padding: 12px; border-radius: 6px;
+        font-size: 12px; max-height: 260px; overflow: auto; margin: 0; }
+  code { background: #eef3f9; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<h1>记账小前台 <small>教学用 · 直连 http://127.0.0.1:8000</small></h1>
+
+<div class="tip">
+  <b>这个页面是我给你造的学习用前端</b>，不属于被测项目（被测项目本身没有前端）。<br>
+  它用 <code>fetch</code> 调真实接口，你能亲手体验：注册 → 登录拿 token → 带 token 建交易 → 看列表和统计。<br>
+  因为是 <code>file://</code> 打开再去调 <code>127.0.0.1:8000</code>，属于跨域请求，所以必须用「关闭跨域检查」的浏览器窗口打开（下面有命令）。
+</div>
+
+<section>
+  <h2>1. 注册 / 登录</h2>
+  <label>邮箱 <input id="email" value="ui01@example.com"></label>
+  <label>密码 <input id="password" type="password" value="Passw0rd!23"></label>
+  <div style="margin-top:12px">
+    <button onclick="doRegister()">注册</button>
+    <button onclick="doLogin()">登录</button>
+    <button class="ghost" onclick="doMe()">看我是谁（/me）</button>
+  </div>
+  <div class="state" id="authState">未登录</div>
+</section>
+
+<section>
+  <h2>2. 记一笔账</h2>
+  <label>金额 <input id="amount" type="number" value="100" style="width:110px"></label>
+  <label>分类 <input id="category" value="food" style="width:130px"></label>
+  <div style="margin-top:12px">
+    <button onclick="doCreateTransaction()">保存</button>
+    <button class="ghost" onclick="doCreateBad()">故意填 0 元（看 422）</button>
+  </div>
+</section>
+
+<section>
+  <h2>3. 我的数据</h2>
+  <button onclick="doRefresh()">刷新列表和统计</button>
+  <div id="stats"></div>
+  <table>
+    <thead><tr><th>id</th><th>金额</th><th>分类</th><th>时间</th></tr></thead>
+    <tbody id="list"><tr><td colspan="4">还没有数据，先登录再点刷新</td></tr></tbody>
+  </table>
+</section>
+
+<section>
+  <h2>调试区：每次请求的原始响应（最新的在最上面）</h2>
+  <pre id="log">（还没有请求）</pre>
+</section>
+
+<script>
+const BASE = "http://127.0.0.1:8000";
+let token = "";
+let currentUser = null;
+
+function log(title, status, data) {
+  const el = document.getElementById("log");
+  el.textContent = "【" + title + "】状态码 " + status + "\n"
+    + JSON.stringify(data, null, 2) + "\n\n" + el.textContent;
+}
+
+async function api(method, path, body, withToken) {
+  const headers = { "Content-Type": "application/json" };
+  if (withToken && token) headers["Authorization"] = "Bearer " + token;
+  const opt = { method: method, headers: headers };
+  if (body !== undefined) opt.body = JSON.stringify(body);
+  const resp = await fetch(BASE + path, opt);
+  let data;
+  const text = await resp.text();
+  try { data = JSON.parse(text); } catch (e) { data = text; }
+  log(method + " " + path, resp.status, data);
+  return { status: resp.status, data: data };
+}
+
+function setState(msg, ok) {
+  const el = document.getElementById("authState");
+  el.className = "state " + (ok ? "ok" : "bad");
+  el.textContent = msg;
+}
+
+function form() {
+  return {
+    email: document.getElementById("email").value.trim(),
+    password: document.getElementById("password").value,
+  };
+}
+
+async function doRegister() {
+  const f = form();
+  const r = await api("POST", "/register", { email: f.email, password: f.password });
+  if (r.status === 201) {
+    setState("注册成功！id=" + r.data.id + "，现在可以点登录", true);
+  } else if (r.status === 400) {
+    setState("这个邮箱已经注册过了（400 User already exists），直接点登录即可", false);
+  } else {
+    setState("注册失败：" + r.status + " " + JSON.stringify(r.data), false);
+  }
+}
+
+async function doLogin() {
+  const f = form();
+  const r = await api("POST", "/login", { email: f.email, password: f.password });
+  if (r.status === 200) {
+    token = r.data.access_token;
+    currentUser = f.email;
+    setState("登录成功！token 已拿到（前 24 位：" + token.slice(0, 24) + "…）", true);
+  } else {
+    setState("登录失败：" + r.status + " " + JSON.stringify(r.data), false);
+  }
+}
+
+async function doMe() {
+  const r = await api("GET", "/me", undefined, true);
+  if (r.status === 200) {
+    setState("服务端认得我：user_id = " + r.data.user_id, true);
+  } else {
+    setState("被拒绝了（" + r.status + "）—— 说明还没登录，或 token 无效", false);
+  }
+}
+
+async function doCreateTransaction() {
+  if (!token) { setState("先点上面的「登录」拿到 token", false); return; }
+  const body = {
+    amount: Number(document.getElementById("amount").value),
+    category: document.getElementById("category").value.trim(),
+  };
+  const r = await api("POST", "/transactions", body, true);
+  if (r.status === 201) {
+    setState("记账成功！这份数据自动归属 user_id=" + r.data.user_id, true);
+    doRefresh();
+  } else {
+    setState("保存失败：" + r.status + " " + JSON.stringify(r.data), false);
+  }
+}
+
+async function doCreateBad() {
+  if (!token) { setState("先登录", false); return; }
+  const r = await api("POST", "/transactions", { amount: 0, category: "test" }, true);
+  if (r.status === 422) {
+    setState("这就是 422：服务器说金额必须大于 0（loc 指向 amount）", true);
+  }
+}
+
+async function doRefresh() {
+  if (!token) { setState("先登录再刷新", false); return; }
+  const list = await api("GET", "/transactions", undefined, true);
+  const stats = await api("GET", "/stats", undefined, true);
+  if (stats.status === 200) {
+    document.getElementById("stats").innerHTML =
+      "<div>总支出<b>" + stats.data.total_expenses + "</b></div>" +
+      "<div>条数<b>" + stats.data.total_number + "</b></div>" +
+      "<div>最大单笔<b>" + stats.data.max_amount + "</b></div>";
+  }
+  if (list.status === 200) {
+    const rows = list.data.map(function (t) {
+      return "<tr><td>" + t.id + "</td><td>" + t.amount + "</td><td>" + t.category +
+             "</td><td>" + (t.date || "") + "</td></tr>";
+    }).join("");
+    document.getElementById("list").innerHTML =
+      rows || '<tr><td colspan="4">暂无交易</td></tr>';
+  }
+}
+</script>
+</body>
+</html>

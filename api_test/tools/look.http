@@ -1,0 +1,25 @@
+@base = http://127.0.0.1:8000
+
+### 1. 探活
+GET {{base}}/
+
+### 2. 不带身份证访问 /me
+GET {{base}}/me
+
+### 3. 注册（密码故意只写 7 位，看 422）
+POST {{base}}/register
+Content-Type: application/json
+
+{"email": "look001@example.com", "password": "1234567"}
+
+### 4. 正常注册
+POST {{base}}/register
+Content-Type: application/json
+
+{"email": "look002@example.com", "password": "Passw0rd!23"}
+
+### 5. 登录（复制响应里的 access_token）
+POST {{base}}/login
+Content-Type: application/json
+
+{"email": "look002@example.com", "password": "Passw0rd!23"}

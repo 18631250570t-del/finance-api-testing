@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小账本 · 个人记账</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy: #16283f; --navy2: #1f3a58; --accent: #2f9e6e; --accent2: #38b47f;
+    --warn: #d97706; --danger: #dc2626; --bg: #f2f5f8; --card: #fff;
+    --line: #e2e8f0; --text: #1e293b; --muted: #7c8899;
+  }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.7;
+    min-height: 100vh;
+  }
+  button { font-family: inherit; cursor: pointer; border: 0; border-radius: 6px; font-size: 13.5px; }
+  input, select { font-family: inherit; font-size: 13.5px; padding: 8px 10px;
+                  border: 1px solid #cfd8e3; border-radius: 6px; background: #fff; color: var(--text); }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
+
+  /* ---------------- 登录页 ---------------- */
+  #loginView {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(140deg, #16283f 0%, #23456a 55%, #2f9e6e 140%);
+    padding: 24px;
+  }
+  .login-card {
+    background: #fff; border-radius: 14px; padding: 34px 32px 28px; width: 100%; max-width: 380px;
+    box-shadow: 0 20px 50px rgba(0,0,0,.28);
+  }
+  .login-card h1 { font-size: 22px; color: var(--navy); margin-bottom: 4px; }
+  .login-card .slogan { font-size: 12.5px; color: var(--muted); margin-bottom: 22px; }
+  .login-card label { display: block; font-size: 12.5px; color: #475569; margin: 12px 0 5px; }
+  .login-card input { width: 100%; }
+  .btn-primary { width: 100%; padding: 11px; background: var(--accent); color: #fff;
+                 font-size: 14.5px; font-weight: 600; margin-top: 18px; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-ghost { width: 100%; padding: 10px; background: #eef2f7; color: var(--navy);
+               margin-top: 9px; font-weight: 500; }
+  .btn-ghost:hover { background: #e2e9f2; }
+  .login-tip { margin-top: 16px; font-size: 12px; color: var(--muted); line-height: 1.8; }
+  .login-tip code { background: #f1f5f9; padding: 1px 5px; border-radius: 3px; color: #b03060; }
+
+  /* ---------------- 主体 ---------------- */
+  header.topbar {
+    background: var(--navy); color: #fff; padding: 0 22px; height: 56px;
+    display: flex; align-items: center; gap: 26px; position: sticky; top: 0; z-index: 20;
+  }
+  header .logo { font-size: 16px; font-weight: 700; letter-spacing: .5px; }
+  header .logo span { color: var(--accent2); }
+  nav.tabs { display: flex; gap: 4px; }
+  nav.tabs button {
+    background: transparent; color: #b9c9db; padding: 7px 16px; border-radius: 6px; font-size: 14px;
+  }
+  nav.tabs button:hover { background: rgba(255,255,255,.08); color: #fff; }
+  nav.tabs button.active { background: var(--accent); color: #fff; font-weight: 600; }
+  header .right { margin-left: auto; display: flex; align-items: center; gap: 12px; font-size: 12.5px; color: #b9c9db; }
+  header .right button { background: rgba(255,255,255,.12); color: #fff; padding: 6px 13px; }
+  header .right button:hover { background: rgba(255,255,255,.22); }
+
+  main { max-width: 1080px; margin: 0 auto; padding: 24px 20px 70px; }
+
+  /* 概览 */
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+  @media (max-width: 720px) { .cards { grid-template-columns: 1fr; } }
+  .stat {
+    background: var(--card); border-radius: 12px; padding: 18px 20px;
+    border: 1px solid var(--line); position: relative; overflow: hidden;
+  }
+  .stat::after {
+    content: ""; position: absolute; right: -22px; top: -22px; width: 70px; height: 70px;
+    border-radius: 50%; background: rgba(47,158,110,.08);
+  }
+  .stat .lab { font-size: 12.5px; color: var(--muted); }
+  .stat .num { font-size: 28px; font-weight: 700; color: var(--navy); margin-top: 4px; }
+  .stat .num small { font-size: 14px; font-weight: 500; color: var(--muted); margin-left: 3px; }
+  .stat .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 18px; }
+  .panel-head { display: flex; align-items: center; margin-bottom: 14px; gap: 12px; }
+  .panel-head h2 { font-size: 15.5px; color: var(--navy); font-weight: 600; }
+  .panel-head .actions { margin-left: auto; display: flex; gap: 8px; }
+
+  /* 条形图 */
+  .bars { display: flex; flex-direction: column; gap: 11px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; font-size: 12.5px; }
+  .bar-row .name { width: 96px; flex: 0 0 96px; color: #475569; overflow: hidden;
+                   text-overflow: ellipsis; white-space: nowrap; }
+  .bar-track { flex: 1; height: 20px; background: #f1f5f9; border-radius: 5px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 5px; transition: width .5s ease; }
+  .bar-row .amt { width: 92px; flex: 0 0 92px; text-align: right;
+                  font-family: Consolas, monospace; color: var(--navy); }
+  .bar-row .pct { width: 46px; flex: 0 0 46px; text-align: right; color: var(--muted); font-size: 11.5px; }
+
+  /* 表格 */
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #eef2f7; }
+  th { font-size: 12px; color: var(--muted); font-weight: 500; }
+  tbody tr:hover { background: #f8fafc; }
+  td.amt { font-family: Consolas, monospace; font-weight: 600; color: var(--navy); }
+  .cat-pill { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 12px; }
+  .row-actions { display: flex; gap: 6px; }
+  .row-actions button { padding: 4px 10px; font-size: 12px; background: #eef2f7; color: var(--navy); }
+  .row-actions button:hover { background: #dfe7f1; }
+  .row-actions button.del { background: #fdecec; color: var(--danger); }
+  .row-actions button.del:hover { background: #fbd5d5; }
+
+  /* 筛选栏 */
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 14px; }
+  .filters .f { display: flex; flex-direction: column; gap: 4px; }
+  .filters .f label { font-size: 11.5px; color: var(--muted); }
+  .filters input, .filters select { width: 132px; }
+  .filters .btn-search { padding: 9px 20px; background: var(--navy); color: #fff; }
+  .filters .btn-search:hover { background: var(--navy2); }
+  .filters .btn-reset { padding: 9px 14px; background: #eef2f7; color: var(--navy); }
+
+  /* 预算卡 */
+  .budget-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+  .budget-card { border: 1px solid var(--line); border-radius: 10px; padding: 15px 16px; background: #fff; }
+  .budget-card .bname { font-size: 15px; font-weight: 600; color: var(--navy); margin-bottom: 6px; }
+  .budget-card .blimit { font-size: 22px; font-weight: 700; color: var(--accent); }
+  .budget-card .blimit small { font-size: 12px; color: var(--muted); font-weight: 400; }
+  .budget-card .btools { display: flex; gap: 8px; margin-top: 12px; }
+  .budget-card .btools button { padding: 5px 12px; font-size: 12px; background: #eef2f7; color: var(--navy); }
+  .budget-card .btools button.del { background: #fdecec; color: var(--danger); }
+
+  .empty { text-align: center; color: var(--muted); padding: 36px 0; font-size: 13.5px; }
+  .empty .big { font-size: 32px; display: block; margin-bottom: 8px; opacity: .45; }
+
+  /* 弹窗 */
+  .mask { position: fixed; inset: 0; background: rgba(15,23,42,.55); display: none;
+          align-items: center; justify-content: center; z-index: 60; padding: 20px; }
+  .mask.show { display: flex; }
+  .modal { background: #fff; border-radius: 12px; width: 100%; max-width: 400px; padding: 24px; }
+  .modal h3 { font-size: 16.5px; color: var(--navy); margin-bottom: 16px; }
+  .modal .f { margin-bottom: 13px; }
+  .modal .f label { display: block; font-size: 12.5px; color: #475569; margin-bottom: 5px; }
+  .modal .f input { width: 100%; }
+  .modal .f .note { font-size: 11.5px; color: var(--warn); margin-top: 4px; }
+  .modal .btns { display: flex; gap: 10px; margin-top: 20px; }
+  .modal .btns button { flex: 1; padding: 10px; }
+  .modal .btns .save { background: var(--accent); color: #fff; font-weight: 600; }
+  .modal .btns .cancel { background: #eef2f7; color: var(--navy); }
+
+  /* 提示条 */
+  #toast {
+    position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%) translateY(20px);
+    background: #1e293b; color: #fff; padding: 11px 20px; border-radius: 8px; font-size: 13.5px;
+    opacity: 0; pointer-events: none; transition: all .25s; z-index: 90; max-width: 90vw;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.err { background: var(--danger); }
+  #toast.ok { background: var(--accent); }
+
+  #netwarn {
+    background: #fdecec; color: #991b1b; padding: 10px 18px; font-size: 12.5px;
+    border-bottom: 1px solid #f5c2c2; display: none;
+  }
+  #netwarn code { background: #fee2e2; padding: 1px 5px; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ================= 登录 / 注册 ================= -->
+<div id="loginView">
+  <div class="login-card">
+    <h1>小账本</h1>
+    <div class="slogan">记下每一笔，看清每一月</div>
+
+    <label>邮箱</label>
+    <input id="loginEmail" type="email" value="me@example.com" autocomplete="username">
+    <label>密码（至少 8 位）</label>
+    <input id="loginPassword" type="password" value="Passw0rd!23" autocomplete="current-password">
+
+    <button class="btn-primary" onclick="doLogin()">登录</button>
+    <button class="btn-ghost" onclick="doRegister()">没有账号？注册一个</button>
+
+    <div class="login-tip">
+      首次使用点「注册一个」，会自动用上面这组邮箱密码。
+    </div>
+
+    <div style="margin-top:14px;font-size:12.5px;color:#7c8899;padding-top:12px;border-top:1px solid #eef2f7">
+      <span id="connDot" style="color:#94a3b8">●</span>
+      <span id="connText">正在检查后端连接…</span>
+      <button onclick="pingBackend()" style="background:none;border:0;color:#2e5c8a;text-decoration:underline;font-size:12.5px;padding:0 0 0 4px">重新检测</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 主应用 ================= -->
+<div id="netwarn">
+  ⚠ 连不上后端。两件事都要满足：① 服务已启动（终端里 uvicorn 在跑）② 用 <code>--disable-web-security</code> 的 Chrome 打开本页（这个 API 没配 CORS）
+</div>
+
+<div id="appView" style="display:none">
+  <header class="topbar">
+    <div class="logo">小<span>账本</span></div>
+    <nav class="tabs">
+      <button id="tabOverview" class="active" onclick="go('overview')">概览</button>
+      <button id="tabTrx" onclick="go('trx')">交易</button>
+      <button id="tabBudget" onclick="go('budget')">预算</button>
+    </nav>
+    <div class="right">
+      <span id="whoami">—</span>
+      <button onclick="doLogout()">退出</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- ---------- 概览 ---------- -->
+    <section id="pageOverview">
+      <div class="cards">
+        <div class="stat">
+          <div class="lab">本月支出</div>
+          <div class="num" id="mTotal">0<small>元</small></div>
+          <div class="sub" id="mSub">共 0 笔</div>
+        </div>
+        <div class="stat">
+          <div class="lab">本月最大单笔</div>
+          <div class="num" id="mMax">0<small>元</small></div>
+          <div class="sub">看看钱都花在哪了</div>
+        </div>
+        <div class="stat">
+          <div class="lab">累计支出</div>
+          <div class="num" id="aTotal">0<small>元</small></div>
+          <div class="sub" id="aSub">共 0 笔</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>分类占比</h2>
+          <div class="actions"><span style="font-size:12px;color:var(--muted)" id="catRange">按全部交易统计</span></div>
+        </div>
+        <div class="bars" id="catBars">
+          <div class="empty"><span class="big">📊</span>还没有数据，先去记一笔</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>最近 5 笔</h2>
+          <div class="actions">
+            <button style="padding:7px 14px;background:var(--accent);color:#fff" onclick="openTrxModal()">＋ 记一笔</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>时间</th><th>分类</th><th>金额</th></tr></thead>
+          <tbody id="recentBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ---------- 交易 ---------- -->
+    <section id="pageTrx" style="display:none">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>全部交易</h2>
+          <div class="actions">
+            <button style="padding:7px 14px;background:var(--accent);color:#fff" onclick="openTrxModal()">＋ 记一笔</button>
+          </div>
+        </div>
+
+        <div class="filters">
+          <div class="f"><label>月份</label><input id="fMonth" type="month"></div>
+          <div class="f"><label>分类</label><input id="fCat" type="text" placeholder="如 food"></div>
+          <div class="f"><label>金额下限</label><input id="fMin" type="number" placeholder="如 100"></div>
+          <div class="f"><label>排序</label>
+            <select id="fSort">
+              <option value="desc">时间 ↓ 新的在前</option>
+              <option value="asc">时间 ↑ 旧的在前</option>
+            </select>
+          </div>
+          <button class="btn-search" onclick="loadTrx()">查询</button>
+          <button class="btn-reset" onclick="resetFilters()">重置</button>
+        </div>
+
+        <table>
+          <thead>
+            <tr><th>编号</th><th>时间</th><th>分类</th><th>金额</th><th style="width:130px">操作</th></tr>
+          </thead>
+          <tbody id="trxBody"></tbody>
+        </table>
+        <div id="trxEmpty" class="empty" style="display:none">
+          <span class="big">🧾</span>没有符合条件的交易
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- 预算 ---------- -->
+    <section id="pageBudget" style="display:none">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>我的预算</h2>
+          <div class="actions">
+            <button style="padding:7px 14px;background:var(--accent);color:#fff" onclick="openBudgetModal()">＋ 新建预算</button>
+          </div>
+        </div>
+        <div class="budget-grid" id="budgetGrid"></div>
+        <div id="budgetEmpty" class="empty" style="display:none">
+          <span class="big">🎯</span>还没设预算。设一个，管住自己。
+        </div>
+        <div style="margin-top:16px;padding:12px 14px;background:#fff8e1;border-left:3px solid #f59e0b;border-radius:5px;font-size:12.5px;color:#7c2d12;line-height:1.8">
+          <b>提醒：</b>这个系统的预算和交易<b>没有关联</b>——设了 1500 的预算，它不会算你已经花了多少，也不会提醒超支。只是一个数字。这是产品层面的短板。
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ================= 弹窗：记一笔 / 改一笔 ================= -->
+<div class="mask" id="trxMask">
+  <div class="modal">
+    <h3 id="trxModalTitle">记一笔</h3>
+    <div class="f">
+      <label>金额（元）</label>
+      <input id="trxAmount" type="number" step="0.01" placeholder="0.00">
+    </div>
+    <div class="f">
+      <label>分类</label>
+      <input id="trxCategory" type="text" placeholder="food / transport / 购物 …" list="catList">
+      <datalist id="catList">
+        <option value="food"></option><option value="transport"></option>
+        <option value="shopping"></option><option value="housing"></option>
+        <option value="fun"></option><option value="医疗"></option>
+      </datalist>
+    </div>
+    <div class="f">
+      <label>时间</label>
+      <input id="trxDate" type="datetime-local">
+      <div class="note" id="dateNote" style="display:none">⚠ 已知缺陷：修改交易时，日期改了不会生效（后端不保存 date）</div>
+    </div>
+    <div class="btns">
+      <button class="cancel" onclick="closeModal('trxMask')">取消</button>
+      <button class="save" onclick="saveTrx()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 弹窗：预算 ================= -->
+<div class="mask" id="budgetMask">
+  <div class="modal">
+    <h3 id="budgetModalTitle">新建预算</h3>
+    <div class="f">
+      <label>预算名称</label>
+      <input id="budgetName" type="text" placeholder="如 每月餐饮">
+    </div>
+    <div class="f">
+      <label>限额（元，必须大于 0）</label>
+      <input id="budgetLimit" type="number" step="0.01" placeholder="1500">
+    </div>
+    <div class="btns">
+      <button class="cancel" onclick="closeModal('budgetMask')">取消</button>
+      <button class="save" onclick="saveBudget()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ============================================================
+   配置
+   ============================================================ */
+const API = "http://127.0.0.1:8000";
+
+const state = {
+  token: "",
+  email: "",
+  userId: null,
+  view: "overview",
+  editingTrxId: null,
+  editingBudgetId: null,
+  categories: []
+};
+
+const $ = (id) => document.getElementById(id);
+
+/* ---------- 通用请求 ---------- */
+async function call(method, path, body) {
+  const headers = { "Content-Type": "application/json" };
+  if (state.token) headers["Authorization"] = "Bearer " + state.token;
+  const opt = { method, headers };
+  if (body !== undefined) opt.body = JSON.stringify(body);
+
+  let resp;
+  try {
+    resp = await fetch(API + path, opt);
+    $("netwarn").style.display = "none";
+  } catch (e) {
+    $("netwarn").style.display = "block";
+    return { status: 0, data: { detail: "连不上后端（服务没起，或浏览器跨域被拦）" } };
+  }
+  const text = await resp.text();
+  let data;
+  try { data = JSON.parse(text); } catch (e) { data = text; }
+  return { status: resp.status, data };
+}
+
+/* ---------- 提示条 ---------- */
+let toastTimer = null;
+function toast(msg, type) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.className = "show " + (type || "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = ""; }, 2600);
+}
+
+/* ---------- 金额 / 时间格式化 ---------- */
+const money = (v) => Number(v || 0).toFixed(2);
+const dateShort = (s) => (s ? String(s).replace("T", " ").slice(0, 16) : "—");
+function catColor(cat) {
+  let h = 0;
+  for (let i = 0; i < String(cat).length; i++) h = (h * 31 + cat.charCodeAt(i)) % 360;
+  return `hsl(${h}, 62%, 48%)`;
+}
+
+/* ============================================================
+   登录 / 注册 / 退出
+   ============================================================ */
+async function doLogin() {
+  const email = $("loginEmail").value.trim();
+  const password = $("loginPassword").value;
+  if (!email || !password) return toast("邮箱和密码都要填", "err");
+  const r = await call("POST", "/login", { email, password });
+  if (r.status !== 200) {
+    return toast("登录失败：" + (r.data && r.data.detail ? r.data.detail : r.status), "err");
+  }
+  state.token = r.data.access_token;
+  state.email = email;
+  sessionStorage.setItem("ft_token", state.token);
+  sessionStorage.setItem("ft_email", email);
+  await enterApp();
+}
+
+async function doRegister() {
+  const email = $("loginEmail").value.trim();
+  const password = $("loginPassword").value;
+  if (password.length < 8) return toast("密码至少 8 位", "err");
+  const r = await call("POST", "/register", { email, password });
+  if (r.status === 201) {
+    toast("注册成功，正在登录…", "ok");
+    state.token = "";
+    await doLogin();
+  } else if (r.status === 400) {
+    toast("这个邮箱已注册过，直接点登录", "err");
+  } else {
+    toast("注册失败：" + (r.data && r.data.detail ? JSON.stringify(r.data.detail) : r.status), "err");
+  }
+}
+
+function doLogout() {
+  state.token = ""; state.email = ""; state.userId = null;
+  sessionStorage.removeItem("ft_token");
+  sessionStorage.removeItem("ft_email");
+  $("appView").style.display = "none";
+  $("loginView").style.display = "flex";
+}
+
+async function enterApp() {
+  const me = await call("GET", "/me");
+  if (me.status !== 200) {
+    toast("token 无效，请重新登录", "err");
+    doLogout();
+    return;
+  }
+  state.userId = me.data.user_id;
+  $("loginView").style.display = "none";
+  $("appView").style.display = "block";
+  $("whoami").textContent = state.email + " · ID " + state.userId;
+  go("overview");
+}
+
+/* ============================================================
+   页面切换
+   ============================================================ */
+function go(view) {
+  state.view = view;
+  ["overview", "trx", "budget"].forEach((v) => {
+    $("page" + v.charAt(0).toUpperCase() + v.slice(1)).style.display = (v === view ? "block" : "none");
+    $("tab" + v.charAt(0).toUpperCase() + v.slice(1)).classList.toggle("active", v === view);
+  });
+  if (view === "overview") loadOverview();
+  if (view === "trx") loadTrx();
+  if (view === "budget") loadBudgets();
+}
+
+/* ============================================================
+   概览
+   ============================================================ */
+async function loadOverview() {
+  const now = new Date();
+  const month = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
+
+  const [allStats, monthStats, list] = await Promise.all([
+    call("GET", "/stats"),
+    call("GET", "/stats?month=" + month),
+    call("GET", "/transactions?sort=desc")
+  ]);
+
+  if (allStats.status === 200) {
+    $("aTotal").innerHTML = money(allStats.data.total_expenses) + "<small>元</small>";
+    $("aSub").textContent = "共 " + allStats.data.total_number + " 笔";
+  }
+  if (monthStats.status === 200) {
+    $("mTotal").innerHTML = money(monthStats.data.total_expenses) + "<small>元</small>";
+    $("mMax").innerHTML = money(monthStats.data.max_amount) + "<small>元</small>";
+    $("mSub").textContent = "共 " + monthStats.data.total_number + " 笔 · " + month;
+  }
+
+  const rows = (list.status === 200 && Array.isArray(list.data)) ? list.data : [];
+  // 最近 5 笔
+  const recent = rows.slice(0, 5);
+  $("recentBody").innerHTML = recent.length
+    ? recent.map((t) => `<tr>
+        <td>${dateShort(t.date)}</td>
+        <td><span class="cat-pill" style="background:${catColor(t.category)}22;color:${catColor(t.category)}">${t.category}</span></td>
+        <td class="amt">¥ ${money(t.amount)}</td>
+      </tr>`).join("")
+    : `<tr><td colspan="3" class="empty" style="padding:26px 0">还没有记录，点右上「＋ 记一笔」开始</td></tr>`;
+
+  // 分类占比
+  const sum = {};
+  rows.forEach((t) => { sum[t.category] = (sum[t.category] || 0) + Number(t.amount); });
+  const entries = Object.entries(sum).sort((a, b) => b[1] - a[1]);
+  const total = entries.reduce((s, e) => s + e[1], 0);
+  state.categories = entries.map((e) => e[0]);
+
+  if (!entries.length) {
+    $("catBars").innerHTML = `<div class="empty"><span class="big">📊</span>还没有数据，先去记一笔</div>`;
+  } else {
+    $("catBars").innerHTML = entries.map(([cat, amt]) => {
+      const pct = total ? (amt / total * 100) : 0;
+      const c = catColor(cat);
+      return `<div class="bar-row">
+        <div class="name" title="${cat}">${cat}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct.toFixed(1)}%;background:${c}"></div></div>
+        <div class="amt">¥ ${money(amt)}</div>
+        <div class="pct">${pct.toFixed(0)}%</div>
+      </div>`;
+    }).join("");
+  }
+  $("catRange").textContent = "按全部交易统计 · 共 " + rows.length + " 笔";
+}
+
+/* ============================================================
+   交易列表
+   ============================================================ */
+function buildTrxQuery() {
+  const q = [];
+  const month = $("fMonth").value;
+  const cat = $("fCat").value.trim();
+  const min = $("fMin").value.trim();
+  const sort = $("fSort").value;
+  if (month) q.push("month=" + encodeURIComponent(month));
+  if (cat) q.push("category=" + encodeURIComponent(cat));
+  if (min !== "") q.push("min_amount=" + encodeURIComponent(min));
+  if (sort) q.push("sort=" + encodeURIComponent(sort));
+  return q.length ? "?" + q.join("&") : "";
+}
+
+async function loadTrx() {
+  const r = await call("GET", "/transactions" + buildTrxQuery());
+  const body = $("trxBody");
+  const empty = $("trxEmpty");
+
+  if (r.status === 400 || r.status === 422) {
+    const d = r.data && r.data.detail;
+    toast("参数不对：" + (typeof d === "string" ? d : JSON.stringify(d)), "err");
+    return;
+  }
+  if (r.status !== 200 || !Array.isArray(r.data)) {
+    toast("查询失败：" + r.status, "err");
+    return;
+  }
+  const rows = r.data;
+  empty.style.display = rows.length ? "none" : "block";
+  body.innerHTML = rows.map((t) => `<tr>
+      <td style="color:var(--muted)">#${t.id}</td>
+      <td>${dateShort(t.date)}</td>
+      <td><span class="cat-pill" style="background:${catColor(t.category)}22;color:${catColor(t.category)}">${t.category}</span></td>
+      <td class="amt">¥ ${money(t.amount)}</td>
+      <td>
+        <div class="row-actions">
+          <button onclick="openTrxModal(${t.id})">编辑</button>
+          <button class="del" onclick="delTrx(${t.id})">删除</button>
+        </div>
+      </td>
+    </tr>`).join("");
+}
+
+function resetFilters() {
+  $("fMonth").value = ""; $("fCat").value = ""; $("fMin").value = "";
+  $("fSort").value = "desc";
+  loadTrx();
+}
+
+/* ---------- 记一笔 / 改一笔 ---------- */
+function nowLocal() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function openTrxModal(id) {
+  state.editingTrxId = id || null;
+  $("trxModalTitle").textContent = id ? "修改交易 #" + id : "记一笔";
+  $("dateNote").style.display = id ? "block" : "none";
+  if (id) {
+    const tr = Array.from(document.querySelectorAll("#trxBody tr"))
+      .find((row) => row.children[0] && row.children[0].textContent === "#" + id);
+    if (tr) {
+      $("trxAmount").value = tr.children[3].textContent.replace("¥", "").trim();
+      $("trxCategory").value = tr.children[2].textContent.trim();
+    }
+    $("trxDate").value = "";
+  } else {
+    $("trxAmount").value = "";
+    $("trxCategory").value = "";
+    $("trxDate").value = nowLocal();
+  }
+  $("trxMask").classList.add("show");
+}
+
+async function saveTrx() {
+  const amount = $("trxAmount").value.trim();
+  const category = $("trxCategory").value.trim();
+  const date = $("trxDate").value;
+
+  if (amount === "" || Number(amount) <= 0) return toast("金额必须大于 0", "err");
+  if (!category) return toast("分类不能为空", "err");
+
+  const payload = { amount: Number(amount), category };
+  if (date && !state.editingTrxId) payload.date = date;
+
+  let r;
+  if (state.editingTrxId) {
+    r = await call("PUT", "/transactions/" + state.editingTrxId, payload);
+  } else {
+    r = await call("POST", "/transactions", payload);
+  }
+
+  if (r.status === 200 || r.status === 201) {
+    closeModal("trxMask");
+    toast(state.editingTrxId ? "改好了" : "记下了", "ok");
+    if (state.view === "trx") loadTrx(); else loadOverview();
+  } else {
+    const d = r.data && r.data.detail;
+    toast("保存失败：" + (typeof d === "string" ? d : JSON.stringify(d)), "err");
+  }
+}
+
+async function delTrx(id) {
+  if (!confirm("确定删除交易 #" + id + " ？")) return;
+  const r = await call("DELETE", "/transactions/" + id);
+  if (r.status === 200) {
+    toast("已删除", "ok");
+    if (state.view === "trx") loadTrx(); else loadOverview();
+  } else {
+    toast("删除失败：" + r.status, "err");
+  }
+}
+
+/* ============================================================
+   预算
+   ============================================================ */
+async function loadBudgets() {
+  const r = await call("GET", "/budgets");
+  const grid = $("budgetGrid");
+  const empty = $("budgetEmpty");
+  if (r.status !== 200 || !Array.isArray(r.data)) {
+    toast("加载预算失败：" + r.status, "err");
+    return;
+  }
+  const rows = r.data;
+  empty.style.display = rows.length ? "none" : "block";
+  grid.innerHTML = rows.map((b) => `
+    <div class="budget-card">
+      <div class="bname">${escapeHtml(b.name)}</div>
+      <div class="blimit">¥ ${money(b.limit)}<small> / 月</small></div>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:4px">编号 #${b.id}</div>
+      <div class="btools">
+        <button onclick="openBudgetModal(${b.id})">编辑</button>
+        <button class="del" onclick="delBudget(${b.id})">删除</button>
+      </div>
+    </div>`).join("");
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+}
+
+function openBudgetModal(id) {
+  state.editingBudgetId = id || null;
+  $("budgetModalTitle").textContent = id ? "编辑预算 #" + id : "新建预算";
+  if (id) {
+    const cards = Array.from(document.querySelectorAll(".budget-card"));
+    const card = cards.find((c) => c.textContent.indexOf("#" + id) > -1);
+    if (card) {
+      $("budgetName").value = card.querySelector(".bname").textContent.trim();
+      $("budgetLimit").value = card.querySelector(".blimit").textContent.replace(/[¥/月\s]/g, "").trim();
+    }
+  } else {
+    $("budgetName").value = "";
+    $("budgetLimit").value = "";
+  }
+  $("budgetMask").classList.add("show");
+}
+
+async function saveBudget() {
+  const name = $("budgetName").value.trim();
+  const limit = $("budgetLimit").value.trim();
+  if (!name) return toast("预算名称不能为空", "err");
+  if (limit === "" || Number(limit) <= 0) return toast("限额必须大于 0", "err");
+
+  const payload = { name, limit: Number(limit) };
+  const r = state.editingBudgetId
+    ? await call("PUT", "/budgets/" + state.editingBudgetId, payload)
+    : await call("POST", "/budgets", payload);
+
+  if (r.status === 200 || r.status === 201) {
+    closeModal("budgetMask");
+    toast(state.editingBudgetId ? "改好了" : "建好了", "ok");
+    loadBudgets();
+  } else {
+    const d = r.data && r.data.detail;
+    toast("保存失败：" + (typeof d === "string" ? d : JSON.stringify(d)), "err");
+  }
+}
+
+async function delBudget(id) {
+  if (!confirm("确定删除预算 #" + id + " ？")) return;
+  const r = await call("DELETE", "/budgets/" + id);
+  if (r.status === 200) { toast("已删除", "ok"); loadBudgets(); }
+  else toast("删除失败：" + r.status, "err");
+}
+
+function closeModal(id) { $(id).classList.remove("show"); }
+
+/* ============================================================
+   启动：有缓存的 token 就直接进
+   ============================================================ */
+async function pingBackend() {
+  const dot = $("connDot"), txt = $("connText");
+  if (!dot || !txt) return;
+  txt.textContent = "正在检查…";
+  dot.style.color = "#94a3b8";
+  try {
+    const r = await fetch(API + "/", { method: "GET" });
+    if (r.ok) {
+      dot.style.color = "#2f9e6e";
+      txt.textContent = "后端已连接 · " + API;
+      $("netwarn").style.display = "none";
+    } else {
+      dot.style.color = "#d97706";
+      txt.textContent = "后端有响应，但状态码 " + r.status;
+    }
+  } catch (e) {
+    dot.style.color = "#dc2626";
+    txt.textContent = "连不上：服务没起，或浏览器跨域被拦";
+    $("netwarn").style.display = "block";
+  }
+}
+
+(async function boot() {
+  await pingBackend();
+
+  const savedToken = sessionStorage.getItem("ft_token");
+  const savedEmail = sessionStorage.getItem("ft_email");
+  if (savedToken) {
+    state.token = savedToken;
+    state.email = savedEmail || "";
+    await enterApp();
+  }
+})();
+</script>
+</body>
+</html>

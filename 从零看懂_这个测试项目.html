@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>从零看懂：我这个接口测试项目</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    max-width: 1020px; margin: 0 auto; padding: 32px 24px 80px;
+    background: #f4f6f9; color: #23282f; line-height: 1.85; font-size: 15px;
+  }
+  h1 { font-size: 27px; margin: 0 0 6px; color: #16324f; }
+  .sub { color: #7b8794; font-size: 13px; margin-bottom: 24px; }
+  h2 { font-size: 21px; margin: 44px 0 14px; padding-bottom: 8px; border-bottom: 2px solid #dbe3ec; color: #16324f; }
+  h3 { font-size: 16px; margin: 26px 0 10px; color: #2c3e50; }
+  p { margin: 10px 0; }
+  code { background: #e8eef6; padding: 1px 6px; border-radius: 3px;
+         font-family: Consolas, "Courier New", monospace; font-size: 13px; color: #b03060; }
+  pre { background: #1d2431; color: #dfe8f3; padding: 14px 16px; border-radius: 8px;
+        overflow-x: auto; font-size: 13px; line-height: 1.7; margin: 12px 0;
+        font-family: Consolas, "Courier New", monospace; }
+  pre .c { color: #6b7f99; }
+  pre .k { color: #7fd1ff; }
+  pre .s { color: #a8e6a3; }
+  pre .n { color: #ffb86c; }
+
+  .toc { background: #fff; border: 1px solid #dde5ee; border-radius: 10px; padding: 16px 20px; }
+  .toc ol { margin: 8px 0 0; padding-left: 22px; }
+  .toc a { color: #2e5c8a; text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+
+  .tip, .warn, .key { border-radius: 8px; padding: 12px 16px; margin: 16px 0; font-size: 14px; }
+  .tip { background: #eaf4ff; border-left: 4px solid #3b82f6; }
+  .warn { background: #fff8e1; border-left: 4px solid #f59e0b; }
+  .key { background: #ecfdf5; border-left: 4px solid #10b981; }
+
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13.8px; background: #fff; }
+  th, td { border: 1px solid #e2e8f0; padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #f1f5f9; color: #475569; font-weight: 600; }
+  td code { background: #f1f5f9; }
+
+  .steps { counter-reset: s; margin: 14px 0; }
+  .step { background: #fff; border: 1px solid #dde5ee; border-radius: 8px;
+          padding: 12px 16px 12px 52px; margin: 9px 0; position: relative; font-size: 14px; }
+  .step::before { counter-increment: s; content: counter(s);
+                  position: absolute; left: 14px; top: 12px; width: 24px; height: 24px;
+                  background: #2e5c8a; color: #fff; border-radius: 50%; text-align: center;
+                  line-height: 24px; font-size: 13px; font-weight: bold; }
+  .step b { color: #16324f; }
+  .step .where { display: inline-block; font-family: Consolas, monospace; font-size: 12px;
+                 color: #64748b; background: #f1f5f9; padding: 1px 7px; border-radius: 4px; margin-left: 6px; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+  .box { background: #fff; border: 1px solid #dde5ee; border-radius: 8px; padding: 14px 16px; }
+  .box h4 { margin: 0 0 8px; font-size: 14px; color: #16324f; }
+
+  .tree { background: #1d2431; color: #dfe8f3; padding: 16px 18px; border-radius: 8px;
+          font-family: Consolas, "Courier New", monospace; font-size: 12.8px; line-height: 1.85; overflow-x: auto; }
+  .tree .c { color: #7f93ad; }
+  .tree .y { color: #ffd479; }
+</style>
+</head>
+<body>
+
+<h1>从零看懂：我这个接口测试项目</h1>
+<div class="sub">
+  这份文档解释的是"接口之外的所有东西"：代码里每个词、每个文件的作用、一次测试怎么跑起来的、以及那些最容易混的概念。<br>
+  配合《接口文档_大白话版.html》一起看：那份讲"系统是什么"，这份讲"我在干什么"。
+</div>
+
+<div class="toc">
+  <b>目录</b>
+  <ol>
+    <li><a href="#layer">全景：五层结构，你在跟哪一层打交道</a></li>
+    <li><a href="#req">一个请求的完整旅程（从你敲命令到数据库）</a></li>
+    <li><a href="#test">一次测试的完整旅程（从 pytest 命令到绿点）</a></li>
+    <li><a href="#files">文件地图：每个文件是干什么的</a></li>
+    <li><a href="#py">代码里每个词的翻译</a></li>
+    <li><a href="#skill">三个核心技巧：为什么这么写</a></li>
+    <li><a href="#confuse">最容易混的 8 组概念</a></li>
+    <li><a href="#flow">工业界的测试流程 vs 我做的</a></li>
+    <li><a href="#now">我现在会了什么、还差什么</a></li>
+  </ol>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="layer">一、全景：五层结构</h2>
+
+<p>你觉得"看不懂"，最常见的原因是<strong>把不同层的事情混在一起想</strong>。分开看就清楚了：</p>
+
+<table>
+  <tr><th>层</th><th>是什么</th><th>具体是什么</th><th>我要不要写代码</th></tr>
+  <tr><td><b>第 1 层</b><br>被测系统</td><td>别人写的记账后台</td><td>Python + FastAPI，跑在 <code>127.0.0.1:8000</code>，10 个 .py 文件</td><td>❌ 不写，只看</td></tr>
+  <tr><td><b>第 2 层</b><br>接口</td><td>系统对外的 15 个窗口</td><td><code>POST /register</code> 这类</td><td>❌ 只调用</td></tr>
+  <tr><td><b>第 3 层</b><br>测试技术</td><td>用什么发请求、用什么判断</td><td>requests 发请求，assert 判断</td><td>✅ 写</td></tr>
+  <tr><td><b>第 4 层</b><br>测试组织</td><td>怎么把一堆检查管起来</td><td>conftest / 用例文件 / 断言封装 / 表驱动</td><td>✅ 写</td></tr>
+  <tr><td><b>第 5 层</b><br>执行与报告</td><td>怎么跑、怎么看结果</td><td><code>pytest</code> 命令 → <code>PASSED</code> → 报告</td><td>✅ 跑</td></tr>
+</table>
+
+<div class="key">
+  <b>记住这句话：</b>你写的东西，永远是"<b>发请求 + 判断对不对</b>"。<br>
+  第 1 层是别人的代码（只看不改），第 2 层是你要对着的靶子，第 3~5 层才是你的活。
+</div>
+
+<!-- ============================================================ -->
+<h2 id="req">二、一个请求的完整旅程</h2>
+
+<p>以"<code>POST /transactions</code> 记一笔账"为例，看看从你发出去到数据进库，中间到底发生了什么。<strong>这就是测试用例能想出来的根本依据。</strong></p>
+
+<div class="steps">
+  <div class="step">
+    <b>你发出请求。</b>测试脚本（或 Postman、或那个小前端）往 <code>127.0.0.1:8000</code> 发了一个 POST，body 里是 <code>{"amount":100,"category":"food"}</code>。
+    <span class="where">你的 test_02_transactions.py</span>
+  </div>
+  <div class="step">
+    <b>uvicorn 收到。</b>uvicorn 是"门童"，负责把网络上的字节流翻译成 HTTP 请求（方法、路径、头、body）。
+    <span class="where">uvicorn 进程</span>
+  </div>
+  <div class="step">
+    <b>交给 FastAPI 应用。</b>就是 <code>app/main.py</code> 里那个 <code>app = FastAPI()</code> 对象。
+    <span class="where">app/main.py</span>
+  </div>
+  <div class="step">
+    <b>查路由表。</b>FastAPI 看"POST + /transactions"这个组合，找到注册过的处理函数 <code>add_transaction</code>。
+    <span class="where">app/routes/transactions.py</span>
+  </div>
+  <div class="step">
+    <b>先执行"依赖"。</b>函数的参数里有 <code>user_id: int = Depends(get_current_user)</code>，FastAPI 会先跑它：读 <code>Authorization</code> 头 → 验证 JWT 签名 → 取出里面的 <code>sub</code>（用户 id）。<br>
+    同时跑 <code>get_db</code> 开一个数据库连接。<br>
+    <b>token 不对就在这一步直接 401，函数体根本不会执行</b>——这就是为什么"没带 token"不会报 422。
+    <span class="where">app/auth/auth.py、app/database/database.py</span>
+  </div>
+  <div class="step">
+    <b>再校验 body。</b>把你传的 JSON 交给 Pydantic 模型 <code>Transaction</code>：<code>amount</code> 必须 &gt; 0，<code>category</code> 长度 1~100。<br>
+    <b>不合规就 422，函数体同样不执行</b>——所以 422 是"框架在门口就把你拦下了"。
+    <span class="where">app/schemas.py</span>
+  </div>
+  <div class="step">
+    <b>真正执行业务。</b>进入 <code>add_transaction</code> 函数体：组装一个 <code>TransactionDB</code> 对象，把 <code>user_id</code> 从 token 里拿到的值塞进去（<b>注意：不接受你传的 user_id</b>）。
+    <span class="where">app/routes/transactions.py</span>
+  </div>
+  <div class="step">
+    <b>SQLAlchemy 翻译成 SQL。</b><code>db.add()</code> + <code>db.commit()</code> → 翻译成 <code>INSERT INTO transactions (...) VALUES (...)</code>。
+    <span class="where">app/database/models.py</span>
+  </div>
+  <div class="step">
+    <b>SQLite 写入。</b>数据真的落进 <code>finance.db</code> 这个文件，并返回新记录的 id。
+  </div>
+  <div class="step">
+    <b>序列化返回。</b>函数返回对象 → FastAPI 按 <code>response_model=TransactionOut</code> 转成 JSON → 加状态码 <code>201</code> 返回给你。
+  </div>
+</div>
+
+<div class="key">
+  <b>这 10 步，就是你所有用例的来源：</b>
+  <table style="margin-top:8px">
+    <tr><th>旅程中的哪一步</th><th>对应的用例</th></tr>
+    <tr><td>第 5 步（鉴权）</td><td>没 token → 401；token 过期 → 401；伪造 → 401</td></tr>
+    <tr><td>第 6 步（校验）</td><td>金额 0/负数/null/字符串 → 422；分类空/超长 → 422</td></tr>
+    <tr><td>第 7 步（业务）</td><td>属主被强绑 → 塞别人 user_id 也没用（TRX-019）</td></tr>
+    <tr><td>第 9 步（落库）</td><td>写入成功 → 再查能查到；统计同步变化</td></tr>
+    <tr><td>第 10 步（序列化）</td><td>响应字段完整性、类型是否正确</td></tr>
+  </table>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="test">三、一次测试的完整旅程</h2>
+
+<p>你在终端敲了 <code>python -m pytest api_test</code>，然后屏幕上就滚出一堆 PASSED。这中间发生了什么？</p>
+
+<div class="steps">
+  <div class="step">
+    <b>pytest 启动，读配置。</b>找到 <code>api_test/pytest.ini</code>：<code>testpaths = tests</code>（只扫 tests 目录）、<code>pythonpath = .</code>（让 <code>from utils.assertions import ...</code> 能找到）。
+    <span class="where">pytest.ini</span>
+  </div>
+  <div class="step">
+    <b>收集用例。</b>扫 <code>test_*.py</code> 文件 → 打开 → 找名字以 <code>test_</code> 开头的函数 → 每个函数算一个"用例项"。<br>
+    <b>所以命名规则不是随便定的：不加 <code>test_</code> 前缀，pytest 就当没看见。</b>
+  </div>
+  <div class="step">
+    <b>加载 conftest.py。</b>pytest 会自动把测试目录上层所有 <code>conftest.py</code> 加载进来，里面的 <code>@pytest.fixture</code> 就变成了"可用零件"。
+    <span class="where">api_test/conftest.py</span>
+  </div>
+  <div class="step">
+    <b>先跑 session 级的自动 fixture。</b>我们的 <code>check_server_up</code> 是 <code>autouse=True</code> + <code>scope="session"</code>：整个测试开始前只跑一次，先访问 <code>/</code> 探活。服务没起就直接停下，给出人话提示。
+  </div>
+  <div class="step">
+    <b>逐条执行用例，按参数名找 fixture。</b>比如 <code>def test_x(client, base_url, user)</code>：<br>
+    · <code>client</code> → 找 session 级 fixture，只建一次<br>
+    · <code>base_url</code> → 同上<br>
+    · <code>user</code> → 找 function 级 fixture，<b>每条用例都新建一个</b>（所以每条用例都是独立新账号）
+  </div>
+  <div class="step">
+    <b>执行 user 这个 fixture。</b>调 <code>_register_and_login()</code>：生成随机邮箱 → <code>POST /register</code> → <code>POST /login</code> → 拼出 headers → 交给你。<br>
+    <b>你在函数里只写了 <code>user</code> 四个字母，背后跑了两个真实请求。</b>
+  </div>
+  <div class="step">
+    <b>执行函数体。</b><code>r = client.post(...)</code> 发真实请求，<code>assert_status(r, 201)</code> 判断。
+  </div>
+  <div class="step">
+    <b>判定。</b>所有 assert 都成立 → <code>PASSED</code>；任何一个不成立 → <code>FAILED</code>，并打印实际值 vs 期望值。<br>
+    <b>一个函数报错不影响其它用例继续跑</b>——这是 pytest 和"一个脚本跑到底"最大的区别。
+  </div>
+  <div class="step">
+    <b>汇总。</b>最后一行 <code>63 passed in 15.8s</code>。数字就是你的成果，也是简历上的量化数据。
+  </div>
+</div>
+
+<div class="tip">
+  <b>为什么每条用例一个新账号？</b><br>
+  因为 <code>POST /register</code> 对已存在的邮箱返回 400。如果所有用例共用一个账号，第 2 条用例就会因为"邮箱已注册"而失败——<b>失败原因还跟被测功能无关</b>，这叫"用例互相污染"。<br>
+  用 <code>uuid</code> 随机邮箱 + function 级 fixture，就彻底解决了。
+</div>
+
+<!-- ============================================================ -->
+<h2 id="files">四、文件地图</h2>
+
+<h3>被测系统（别人的，你只读不改）</h3>
+<div class="tree">
+<span class="y">D:\chatgpt test woke\personal-finance-tracker-api\</span>
+├── <span class="y">app/main.py</span>              <span class="c">← 入口：创建 app、注册路由、写 /stats 和 /</span>
+├── <span class="y">app/routes/auth.py</span>       <span class="c">← /register /login /me 三个接口</span>
+├── <span class="y">app/routes/transactions.py</span> <span class="c">← 交易的增删改查（最复杂的文件）</span>
+├── <span class="y">app/routes/budgets.py</span>    <span class="c">← 预算的增删改查</span>
+├── <span class="y">app/schemas.py</span>           <span class="c">← 所有"入参/出参长什么样"的定义（Pydantic）</span>
+├── <span class="y">app/database/models.py</span>   <span class="c">← 数据库表结构（users/transactions/budgets）</span>
+├── <span class="y">app/auth/auth.py</span>         <span class="c">← 生成 token、校验 token</span>
+├── <span class="y">app/services/stats.py</span>    <span class="c">← /stats 的算法（把金额加起来）</span>
+├── <span class="y">finance.db</span>                <span class="c">← SQLite 数据文件（你的数据都在这）</span>
+├── <span class="y">.env</span>                      <span class="c">← 密钥、数据库地址等配置</span>
+├── <span class="y">.venv/</span>                    <span class="c">← 这个项目专属的 Python 环境</span>
+└── <span class="y">tests/</span>                    <span class="c">← ⚠ 开发自己写的单元测试，不是你的</span>
+</div>
+
+<h3>你的测试项目（你写的）</h3>
+<div class="tree">
+<span class="y">D:\personal-finance-tracker-api\</span>
+├── <span class="y">api_test/</span>
+│   ├── <span class="y">pytest.ini</span>              <span class="c">← 告诉 pytest：扫哪、怎么扫、有哪些标签</span>
+│   ├── <span class="y">conftest.py</span>             <span class="c">← 公共准备：探活、发请求的 client、造账号、造数据</span>
+│   ├── <span class="y">tests/</span>
+│   │   ├── <span class="y">test_01_auth.py</span>       <span class="c">← 认证类用例（注册/登录/我的是谁）</span>
+│   │   ├── <span class="y">test_02_transactions.py</span> <span class="c">← 交易类（创建校验、筛选、排序）</span>
+│   │   ├── <span class="y">test_03_budgets.py</span>    <span class="c">← 预算类（还没铺）</span>
+│   │   ├── <span class="y">test_04_stats.py</span>      <span class="c">← 统计类（还没铺）</span>
+│   │   └── <span class="y">test_05_common.py</span>     <span class="c">← 通用：未授权扫描、越权访问</span>
+│   ├── <span class="y">utils/assertions.py</span>     <span class="c">← 断言封装（assert_status / assert_validation）</span>
+│   ├── <span class="y">utils/token_factory.py</span>  <span class="c">← 造过期/伪造 token（还没用上）</span>
+│   ├── <span class="y">look.py</span>                 <span class="c">← 手工探查脚本（不是用例，pytest 不收集）</span>
+│   ├── <span class="y">mini_frontend.html</span>      <span class="c">← 点鼠标用的练习前端</span>
+│   └── <span class="y">接口文档_大白话版.html</span>   <span class="c">← 那份接口文档</span>
+├── <span class="y">tools/chromedriver.exe</span>     <span class="c">← UI 自动化用的驱动（备用）</span>
+└── <span class="y">替换驱动_需管理员运行.ps1</span>  <span class="c">← 换驱动用的一次性脚本</span>
+</div>
+
+<div class="warn">
+  <b>⚠ 为什么测试项目要单独放，不放进被测系统的 <code>tests/</code> 目录？</b><br>
+  因为被测项目自带的 <code>tests/conftest.py</code> 会把数据库换成"内存库"、把 app 直接挂到 TestClient 上。
+  你的用例一旦放进那个目录，请求就会打到内存库而不是你启动的服务，<b>而且用例看起来还是绿的</b>——排查能耗半天。
+</div>
+
+<!-- ============================================================ -->
+<h2 id="py">五、代码里每个词的翻译</h2>
+
+<p>按你在文件里实际遇到的出现频率排：</p>
+
+<table>
+  <tr><th>写法</th><th>读作</th><th>说明</th></tr>
+  <tr><td><code>import requests</code></td><td>"把 requests 工具箱拿过来"</td><td>不拿就没法用里面的东西</td></tr>
+  <tr><td><code>from utils.assertions import assert_status</code></td><td>"从 utils/assertions.py 里，只拿 assert_status 这一样"</td><td>比 import 更精准</td></tr>
+  <tr><td><code>def test_xxx(...):</code></td><td>"定义一个叫 test_xxx 的步骤"</td><td>名字必须 test_ 开头，pytest 才认</td></tr>
+  <tr><td>缩进 4 个空格</td><td>"以下内容属于上一层"</td><td>Python 用缩进表示从属，<b>不用大括号</b>，错一个空格就报错</td></tr>
+  <tr><td><code>assert 条件</code></td><td>"我断言：必须是这样"</td><td>不成立就立刻失败</td></tr>
+  <tr><td><code>assert 条件, "说明"</code></td><td>"断言 + 失败时把这句话打出来"</td><td>排障靠它</td></tr>
+  <tr><td><code>=</code></td><td>"装进去"</td><td><code>r = ...</code> 把结果装进盒子 r</td></tr>
+  <tr><td><code>==</code></td><td>"等于吗"</td><td>判断用两个等号，别和装进去混</td></tr>
+  <tr><td><code>f"{BASE}/login"</code></td><td>"把 BASE 的值填进这个坑里"</td><td>f-string 拼字符串</td></tr>
+  <tr><td><code>{"email": "a@b.c"}</code></td><td>字典：一堆"键: 值"</td><td>JSON 就是这个东西</td></tr>
+  <tr><td><code>["A", "B"]</code></td><td>列表：一排东西</td><td>顺序固定</td></tr>
+  <tr><td><code>r.status_code</code></td><td>"从 r 这个盒子上取 status_code 那个标签"</td><td>点号 = 取属性</td></tr>
+  <tr><td><code>r.json()</code></td><td>"把响应内容按 JSON 解析成字典"</td><td>后面才能 <code>r.json()["detail"]</code></td></tr>
+  <tr><td><code>None</code></td><td>"空 / 没有"</td><td>注意不是字符串 "None"</td></tr>
+  <tr><td><code>for x in 列表:</code></td><td>"挨个拿出来"</td><td>造数据、遍历详情都用它</td></tr>
+  <tr><td><code>if 条件:</code> / <code>else:</code></td><td>"如果是这样…否则…"</td><td>比如 401 和 422 两种断言</td></tr>
+  <tr><td><code># 注释</code></td><td>给人看的，机器忽略</td><td>写"为什么"，别写"是什么"</td></tr>
+  <tr><td><code>"""说明"""</code></td><td>docstring，函数说明</td><td>我们把用例编号写在这里</td></tr>
+  <tr><td><code>@pytest.fixture</code></td><td>"这是一个准备工作，谁要谁拿走"</td><td>装饰器，贴在函数头顶</td></tr>
+  <tr><td><code>@pytest.mark.parametrize(...)</code></td><td>"这个函数用一张表跑很多次"</td><td>表驱动</td></tr>
+  <tr><td><code>yield</code></td><td>"先交出东西，用完再回来收尾"</td><td>fixture 里常用来做清理</td></tr>
+  <tr><td><code>return</code></td><td>"把这个结果交出去"</td><td>函数结束</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="skill">六、三个核心技巧：为什么这么写</h2>
+
+<h3>技巧 1：fixture —— 别每次手动造账号</h3>
+
+<div class="grid2">
+  <div class="box">
+    <h4>❌ 不用 fixture</h4>
+<pre>每条用例都写一遍：
+  随机邮箱
+  POST /register
+  POST /login
+  拿 token
+  拼 headers
+  ...然后才开始测</pre>
+    <p style="font-size:13px;color:#64748b">20 条用例 = 重复 20 遍，改一处要改 20 处</p>
+  </div>
+  <div class="box">
+    <h4>✅ 用 fixture</h4>
+<pre>def test_x(client, base_url, <span class="s">user</span>):
+    r = client.get(..., headers=<span class="s">user["headers"]</span>)</pre>
+    <p style="font-size:13px;color:#64748b">背后自动跑注册+登录，你只写四个字母</p>
+  </div>
+</div>
+
+<p><b>本质：</b>把"准备工作"从用例里抽出去，一处维护，处处复用。这就是<b>测试框架</b>和"一堆脚本"的区别。</p>
+
+<h3>技巧 2：表驱动 —— 别复制粘贴用例</h3>
+
+<pre><span class="c"># 一张表 = 8 条用例</span>
+@pytest.mark.parametrize(<span class="s">"payload, field"</span>, [
+    ({<span class="s">"email"</span>: <span class="s">"v1@x.com"</span>, <span class="s">"password"</span>: <span class="s">"1234567"</span>}, <span class="s">"password"</span>),   <span class="c"># 密码 7 位</span>
+    ({<span class="s">"email"</span>: <span class="s">"not-an-email"</span>, <span class="s">"password"</span>: <span class="s">"Passw0rd!23"</span>}, <span class="s">"email"</span>),
+    <span class="c"># ... 再写 6 行</span>
+], ids=[<span class="s">"AUTH-003"</span>, <span class="s">"AUTH-007"</span>, ...])
+<span class="k">def</span> <span class="k">test_register</span>(client, base_url, payload, field):
+    r = client.post(<span class="s">f"{base_url}/register"</span>, json=payload)
+    assert_validation(r, field)</pre>
+
+<p><b>为什么好：</b>① 数据集中，一眼看出测了哪些情况 ② 加一条用例只是加一行 ③ 不会被复制粘贴时漏改某个值。</p>
+
+<h3>技巧 3：断言封装 —— 失败时告诉你发生了什么</h3>
+
+<div class="grid2">
+  <div class="box">
+    <h4>❌ 裸断言</h4>
+<pre>assert r.status_code == 422
+
+<span style="color:#e57373">AssertionError: assert 500 == 422</span>
+<span class="c">然后你就懵了：为什么是 500？</span></pre>
+  </div>
+  <div class="box">
+    <h4>✅ 封装后</h4>
+<pre>assert_validation(r, "amount")
+
+<span style="color:#81c784">请求: POST /transactions
+请求体: {"amount": "abc"}
+期望: 422  实际: 500
+响应体: {"detail": "Internal Server Error"}</span></pre>
+  </div>
+</div>
+
+<p><b>记住这个投入产出比：</b>写封装要 10 分钟，省下的排障时间是几十个小时。</p>
+
+<!-- ============================================================ -->
+<h2 id="confuse">七、最容易混的 8 组概念</h2>
+
+<table>
+  <tr><th>对比</th><th>区别</th><th>怎么记</th></tr>
+  <tr>
+    <td><code>400</code> vs <code>422</code></td>
+    <td>400 = 业务上办不了（邮箱重复）；422 = 格式不对（密码太短）</td>
+    <td>422 是<b>框架</b>在门口拦的，400 是<b>代码</b>里手动抛的</td>
+  </tr>
+  <tr>
+    <td><code>401</code> vs <code>403</code></td>
+    <td>401 = 你没证明你是谁；403 = 知道你是谁，但不许你干</td>
+    <td>这个项目<b>不用 403</b>，跨用户访问返回 404（故意不告诉你东西存不存在）</td>
+  </tr>
+  <tr>
+    <td><code>PUT</code> vs <code>PATCH</code></td>
+    <td>PUT = 整体替换（少一个字段就 422）；PATCH = 只改传了的字段</td>
+    <td>这项目只有 PUT，所以"只改金额"必须把分类一起传</td>
+  </tr>
+  <tr>
+    <td>路径参数 vs query 参数 vs body</td>
+    <td><code>/transactions/<b>7</b></code>（路径）｜<code>?month=2026-05</code>（query）｜<code>{"amount":100}</code>（body）</td>
+    <td>指明"哪一个"用路径；"筛选"用 query；"提交内容"用 body</td>
+  </tr>
+  <tr>
+    <td>镜像 vs 容器</td>
+    <td>镜像 = 安装光盘（只读模板）；容器 = 用光盘装出来正在跑的程序</td>
+    <td><code>docker pull</code> 下载镜像；<code>docker run</code> 启动容器</td>
+  </tr>
+  <tr>
+    <td>假成功 vs 报错</td>
+    <td>假成功 = 返回 200 但事情没做（如改了 date 没存库）；报错 = 明确告诉你失败</td>
+    <td><b>假成功更危险</b>，因为没人会发现</td>
+  </tr>
+  <tr>
+    <td>冒烟 vs 回归</td>
+    <td>冒烟 = 核心链路能不能跑（P0，几分钟）；回归 = 全部用例再跑一遍（防止改坏旧功能）</td>
+    <td>上线前跑冒烟；每次改代码跑回归</td>
+  </tr>
+  <tr>
+    <td>测试用例 vs 测试脚本</td>
+    <td>用例 = 一句话描述"做什么、期望什么"；脚本 = 那句用例的可执行版本</td>
+    <td>一条用例可以写成脚本，也可以手工执行</td>
+  </tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="flow">八、工业界的测试流程 vs 我做的</h2>
+
+<table>
+  <tr><th>工业界标准流程</th><th>我做到哪了</th></tr>
+  <tr><td>① 需求评审，理解要测什么</td><td>🟡 靠你刚看的那份接口文档补的</td></tr>
+  <tr><td>② 设计测试用例（写进用例管理系统）</td><td>✅ 202 条，在 Excel 里</td></tr>
+  <tr><td>③ 准备测试环境（部署被测系统、造数据）</td><td>✅ uvicorn + finance.db</td></tr>
+  <tr><td>④ 执行测试（手工 + 自动化）</td><td>✅ 自动化的 63 条已跑通</td></tr>
+  <tr><td>⑤ 提交缺陷单，跟踪修复</td><td>✅ 18 项缺陷清单（还没提给"开发"）</td></tr>
+  <tr><td>⑥ 回归测试</td><td>❌ 等做完整套再说</td></tr>
+  <tr><td>⑦ 出测试报告</td><td>❌ <b>还没做，这是你简历最缺的一块</b></td></tr>
+  <tr><td>⑧ 上线评审 / 验收</td><td>—（这不是真项目，跳过）</td></tr>
+</table>
+
+<div class="key">
+  <b>你现在的完成度大概是 60%。</b>差的三样按重要性排：<br>
+  1. <b>测试报告</b>（面试官一定会问"有报告吗"，而且这是实物）<br>
+  2. <b>跑通全部用例 + HTML 报告</b>（<code>pytest --html=report.html</code> 一条命令）<br>
+  3. <b>接 CI</b>（GitHub Actions，加分项）
+</div>
+
+<!-- ============================================================ -->
+<h2 id="now">九、我现在会了什么、还差什么</h2>
+
+<h3>已经掌握（这些是真会，不是"看过"）</h3>
+<table>
+  <tr><th>能力</th><th>证据</th></tr>
+  <tr><td>能起被测服务、能判断服务是否活着</td><td>uvicorn 起服务 + 探活 fixture</td></tr>
+  <tr><td>会发 HTTP 请求、会看响应</td><td>PowerShell + Python 两种方式都跑过</td></tr>
+  <tr><td>会用 assert 判断、能读懂失败信息</td><td>故意改错看过红点</td></tr>
+  <tr><td>会用 fixture 做公共准备</td><td>user / user2 / seeded / cross_user</td></tr>
+  <tr><td>会用表驱动批量写用例</td><td>注册 8 条、筛选 9 条、未授权 12 条</td></tr>
+  <tr><td>会写越权测试（安全）</td><td>cross_user：6 条 404 + 隔离 + 属主篡改</td></tr>
+  <tr><td>会读源码找缺陷</td><td>发现 CORS 缺失、date 不落库、月份规则不一致</td></tr>
+</table>
+
+<h3>还差的（按对你的重要性）</h3>
+<table>
+  <tr><th>缺什么</th><th>为什么重要</th><th>补法</th></tr>
+  <tr><td>测试报告</td><td>面试必问，也是唯一的"成果物"</td><td>1 小时能出一版</td></tr>
+  <tr><td>SQL 基础</td><td>面试几乎必考"查某用户本月总支出"</td><td>半天练 10 条查询</td></tr>
+  <tr><td>抓包（F12）</td><td>功能测试日常，也是面试高频</td><td>1 小时</td></tr>
+  <tr><td>Linux 常用命令</td><td>部署、看日志都靠它</td><td>半天</td></tr>
+  <tr><td>讲清楚项目的能力</td><td>你有的东西已经够了，但要说得出</td><td>对着"8 个高频问题"练</td></tr>
+</table>
+
+<div class="warn">
+  <b>最后一句大实话：</b>你觉得难，不是因为你笨，是因为<b>没有人从"这个系统是干什么的"开始讲</b>，直接从"写测试代码"开始，谁都会懵。<br>
+  现在你补上了这块，回头看那些代码，应该会顺很多。剩下的就是练。
+</div>
+
+<p style="margin-top:40px;color:#94a3b8;font-size:12px;border-top:1px solid #e2e8f0;padding-top:14px">
+  本文档基于本会话中你实际跑过的命令、写过的文件、遇到的报错整理，不是通用教程。
+  遇到不懂的地方，随时指着某一节问我。
+</p>
+
+</body>
+</html>
